@@ -5,6 +5,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <netdb.h>
+#include <stdlib.h>
 
 
 int main(int argc, char const *argv[])
@@ -17,10 +18,10 @@ int main(int argc, char const *argv[])
 
     struct sockaddr_in addr;
     addr.sin_family = AF_INET;
-    addr.sin_port = htons(8080);
-    // struct hostent *p_host = gethostbyname("baidu.com");
-    // memcpy(&(addr.sin_addr.s_addr), p_host->h_addr_list[0], sizeof(addr.sin_addr.s_addr));
-    addr.sin_addr.s_addr = inet_addr("0.0.0.0");
+    addr.sin_port = htons(80);
+    struct hostent *p_host = gethostbyname("baidu.com");
+    memcpy(&(addr.sin_addr.s_addr), p_host->h_addr_list[0], sizeof(addr.sin_addr.s_addr));
+    // addr.sin_addr.s_addr = inet_addr("0.0.0.0");
     // bzero(&addr.sin_zero, sizeof(addr.sin_zero));
 
     int err = connect(sock, (struct sockaddr *)&addr, sizeof(addr));
@@ -35,11 +36,20 @@ int main(int argc, char const *argv[])
                      "\r\n";
 
     send(sock, buf, strlen(buf), 0);
-    bzero(buf, sizeof(buf));
 
-    int n = recv(sock, buf, 1024, 0);
-    printf("recv num: %d\n\n%s", n, buf);
-
+    while(1)
+    {
+        int n = recv(sock, buf, 1023, 0);
+        if (n == 0) break;
+        if (n < 0)
+        {
+            perror("recv");
+            break;
+        }
+        buf[n] = '\0';
+        printf("%s", buf);
+    }
+    printf("\n");
     close(sock);
     return 0;
 }
