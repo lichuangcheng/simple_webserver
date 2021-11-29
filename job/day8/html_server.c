@@ -26,18 +26,19 @@ void error_exit(const char *s)
 
 int sendhtml(int sock, const char *file)
 {
-    int fd = open(file, O_RDONLY);
-    if (fd == -1)
+    FILE *fp = fopen(file, "r");
+    if (fp == NULL)
         error_exit("open file failed");
 
     struct stat file_st;
     stat(file, &file_st);
     size_t file_size = file_st.st_size;
 
-    if (sendfile(sock, fd, 0, file_size) == -1)
-        error_exit("sendfile");
+    char *html = calloc(1, file_size + 1);
+    fread(html, 1, file_size, fp);
+    send(sock, html, file_size, 0);
 
-    close(fd);
+    fclose(fp);
     return 0;
 }
 
