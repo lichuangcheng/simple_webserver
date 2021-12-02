@@ -1,3 +1,7 @@
+//
+// ini 配置文件的解析实现参考自 https://github.com/pocoproject/poco 项目的 Util/src/IniFileConfiguration.cpp 等相关文件
+// 
+
 #include "simpleweb/ini_config.h"
 #include "simpleweb/string_utils.h"
 #include <fstream>
