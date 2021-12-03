@@ -26,11 +26,9 @@ public:
     int32_t get_int32(const std::string& key);
     int32_t get_int32(const std::string& key, int32_t default_value);
 
-    // Unimplemented
     bool get_bool(const std::string& key);
     bool get_bool(const std::string& key, bool default_value);
 
-    // Unimplemented
     float get_float(const std::string& key);
     float get_float(const std::string& key, float default_value);
 
@@ -42,6 +40,7 @@ public:
     ~IniConfig() = default;
 private:
     void parse_line(const std::string& line);
+    bool parse_bool(const std::string& value);
 
     typedef std::map<std::string, std::string> StringMap;
 

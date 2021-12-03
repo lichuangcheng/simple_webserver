@@ -6,6 +6,7 @@
 #include "simpleweb/string_utils.h"
 #include <fstream>
 #include <iostream>
+#include <strings.h>
 
 
 namespace simpleweb {
@@ -82,6 +83,46 @@ int32_t IniConfig::get_int32(const std::string& key, int32_t default_value)
 }
 
 
+bool IniConfig::get_bool(const std::string& key) 
+{
+    std::string value;
+    if (get_raw(key, value))
+        return parse_bool(value);
+    else 
+        throw std::invalid_argument("Key Not Found: " + key);
+}
+
+
+bool IniConfig::get_bool(const std::string& key, bool default_value) 
+{
+    std::string value;
+    if (get_raw(key, value))
+        return parse_bool(value);
+    else 
+        return default_value;
+}
+
+
+float IniConfig::get_float(const std::string& key) 
+{
+    std::string value;
+    if (get_raw(key, value))
+        return std::stof(value);
+    else 
+        throw std::invalid_argument("Key Not Found: " + key);
+}
+
+
+float IniConfig::get_float(const std::string& key, float default_value) 
+{
+    std::string value;
+    if (get_raw(key, value))
+        return std::stof(value);
+    else 
+        return default_value;
+}
+
+
 bool IniConfig::get_raw(const std::string& key, std::string& value) 
 {
     auto it = map_.find(key);
@@ -123,7 +164,6 @@ void IniConfig::parse_line(const std::string& line)
     auto it  = line.begin();
     auto end = line.end();
 
-    // 跳过空白字符
     while(it != end && is_space(*it)) it++;
     if (is_comment(*it))
         return;
@@ -163,6 +203,30 @@ void IniConfig::parse_line(const std::string& line)
         fullkey.append(trim(key));
         map_[fullkey] = trim(value);
     }
+}
+
+
+bool IniConfig::parse_bool(const std::string& value)
+{
+	if (!strcasecmp(value.c_str(), "1"))
+		return true;
+	else if (!strcasecmp(value.c_str(), "0") == 0)
+		return false;
+	else if (!strcasecmp(value.c_str(), "true") == 0)
+		return true;
+	else if (!strcasecmp(value.c_str(), "yes") == 0)
+		return true;
+	else if (!strcasecmp(value.c_str(), "on") == 0)
+		return true;
+	else if (!strcasecmp(value.c_str(), "false") == 0)
+		return false;
+	else if (!strcasecmp(value.c_str(), "no") == 0)
+		return false;
+	else if (!strcasecmp(value.c_str(), "off") == 0)
+		return false;
+	else 
+        throw std::runtime_error("Cannot convert to boolean: " + value);
+		// throw SyntaxException("Cannot convert to boolean", value);
 }
 
 
