@@ -4,6 +4,7 @@
 
 #include <string>
 #include <string_view>
+#include <algorithm>
 
 
 namespace simpleweb {
@@ -37,6 +38,34 @@ std::string trim(std::string_view str)
 	while (last >= first && std::isspace(str[last])) --last;
 
 	return std::string(str, first, last - first + 1);
+}
+
+
+inline std::string to_upper(std::string s) 
+{
+    std::transform(s.begin(), s.end(), s.begin(), 
+                   [](unsigned char c){ return std::toupper(c); }
+                  );
+    return s;
+}
+
+
+inline std::string to_lower(std::string s) 
+{
+    std::transform(s.begin(), s.end(), s.begin(), 
+                   [](unsigned char c){ return std::tolower(c); } 
+                  );
+    return s;
+}
+
+
+bool iequals(std::string_view a, std::string_view b)
+{
+    return std::equal(a.begin(), a.end(),
+                      b.begin(), b.end(),
+                      [](uint8_t a, uint8_t b) {
+                          return std::tolower(a) == std::tolower(b);
+                      });
 }
 
 
