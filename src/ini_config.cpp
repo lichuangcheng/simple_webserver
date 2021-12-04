@@ -208,21 +208,21 @@ void IniConfig::parse_line(const std::string& line)
 
 bool IniConfig::parse_bool(const std::string& value)
 {
-    if (!strcasecmp(value.c_str(), "1"))
+    if (iequals(value, "1"))
         return true;
-    else if (!strcasecmp(value.c_str(), "0") == 0)
+    else if (iequals(value, "0"))
         return false;
-    else if (!strcasecmp(value.c_str(), "true") == 0)
+    else if (iequals(value, "true"))
         return true;
-    else if (!strcasecmp(value.c_str(), "yes") == 0)
+    else if (iequals(value, "yes"))
         return true;
-    else if (!strcasecmp(value.c_str(), "on") == 0)
+    else if (iequals(value, "on"))
         return true;
-    else if (!strcasecmp(value.c_str(), "false") == 0)
+    else if (iequals(value, "false"))
         return false;
-    else if (!strcasecmp(value.c_str(), "no") == 0)
+    else if (iequals(value, "no"))
         return false;
-    else if (!strcasecmp(value.c_str(), "off") == 0)
+    else if (iequals(value, "off"))
         return false;
     else 
         throw std::runtime_error("Cannot convert to boolean: " + value);
