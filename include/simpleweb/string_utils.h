@@ -10,7 +10,7 @@
 namespace simpleweb {
 
 
-std::string trim_left(std::string_view str)
+inline std::string trim_left(std::string_view str)
 {
 	auto it  = str.begin();
 	auto end = str.end();
@@ -20,7 +20,7 @@ std::string trim_left(std::string_view str)
 }
 
 
-std::string trim_right(std::string_view str)
+inline std::string trim_right(std::string_view str)
 {
     std::ptrdiff_t pos = static_cast<std::ptrdiff_t>(str.size()) - 1;
 
@@ -29,7 +29,7 @@ std::string trim_right(std::string_view str)
 }
 
 
-std::string trim(std::string_view str)
+inline std::string trim(std::string_view str)
 {
 	std::ptrdiff_t first = 0;
 	std::ptrdiff_t last  = static_cast<std::ptrdiff_t>(str.size()) - 1;
