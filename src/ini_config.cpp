@@ -46,7 +46,7 @@ void IniConfig::load(std::istream& is)
 }
 
 
-std::string IniConfig::get_string(const std::string& key) 
+std::string IniConfig::get_string(const std::string& key) const
 {
     std::string value;
     if (get_raw(key, value))
@@ -56,14 +56,14 @@ std::string IniConfig::get_string(const std::string& key)
 }
 
 
-std::string IniConfig::get_string(const std::string& key, const std::string& default_value) 
+std::string IniConfig::get_string(const std::string& key, const std::string& default_value) const
 {
     std::string value;
     return get_raw(key, value) ? value : default_value;
 }
 
 
-int32_t IniConfig::get_int32(const std::string& key) 
+int32_t IniConfig::get_int32(const std::string& key) const
 {
     std::string value;
     if (get_raw(key, value))
@@ -73,7 +73,7 @@ int32_t IniConfig::get_int32(const std::string& key)
 }
 
 
-int32_t IniConfig::get_int32(const std::string& key, int32_t default_value) 
+int32_t IniConfig::get_int32(const std::string& key, int32_t default_value) const
 {
     std::string value;
     if (get_raw(key, value))
@@ -83,7 +83,7 @@ int32_t IniConfig::get_int32(const std::string& key, int32_t default_value)
 }
 
 
-bool IniConfig::get_bool(const std::string& key) 
+bool IniConfig::get_bool(const std::string& key) const
 {
     std::string value;
     if (get_raw(key, value))
@@ -93,7 +93,7 @@ bool IniConfig::get_bool(const std::string& key)
 }
 
 
-bool IniConfig::get_bool(const std::string& key, bool default_value) 
+bool IniConfig::get_bool(const std::string& key, bool default_value) const
 {
     std::string value;
     if (get_raw(key, value))
@@ -103,7 +103,7 @@ bool IniConfig::get_bool(const std::string& key, bool default_value)
 }
 
 
-float IniConfig::get_float(const std::string& key) 
+float IniConfig::get_float(const std::string& key) const 
 {
     std::string value;
     if (get_raw(key, value))
@@ -113,7 +113,7 @@ float IniConfig::get_float(const std::string& key)
 }
 
 
-float IniConfig::get_float(const std::string& key, float default_value) 
+float IniConfig::get_float(const std::string& key, float default_value) const 
 {
     std::string value;
     if (get_raw(key, value))
@@ -123,7 +123,7 @@ float IniConfig::get_float(const std::string& key, float default_value)
 }
 
 
-bool IniConfig::get_raw(const std::string& key, std::string& value) 
+bool IniConfig::get_raw(const std::string& key, std::string& value) const 
 {
     auto it = map_.find(key);
     if (it != map_.end())
@@ -206,7 +206,7 @@ void IniConfig::parse_line(const std::string& line)
 }
 
 
-bool IniConfig::parse_bool(const std::string& value)
+bool IniConfig::parse_bool(const std::string& value) 
 {
     if (iequals(value, "1"))
         return true;
