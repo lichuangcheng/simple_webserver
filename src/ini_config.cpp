@@ -164,7 +164,7 @@ void IniConfig::parse_line(const std::string& line)
     auto it  = line.begin();
     auto end = line.end();
 
-    while(it != end && is_space(*it)) it++;
+    while(it != end && std::isspace(*it)) it++;
     if (is_comment(*it))
         return;
 
