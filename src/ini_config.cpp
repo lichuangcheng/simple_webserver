@@ -126,12 +126,12 @@ float IniConfig::get_float(const std::string& key, float default_value)
 bool IniConfig::get_raw(const std::string& key, std::string& value) 
 {
     auto it = map_.find(key);
-	if (it != map_.end())
-	{
-		value = it->second;
-		return true;
-	}
-	else return false;
+    if (it != map_.end())
+    {
+        value = it->second;
+        return true;
+    }
+    else return false;
 }
 
 
@@ -208,25 +208,25 @@ void IniConfig::parse_line(const std::string& line)
 
 bool IniConfig::parse_bool(const std::string& value)
 {
-	if (!strcasecmp(value.c_str(), "1"))
-		return true;
-	else if (!strcasecmp(value.c_str(), "0") == 0)
-		return false;
-	else if (!strcasecmp(value.c_str(), "true") == 0)
-		return true;
-	else if (!strcasecmp(value.c_str(), "yes") == 0)
-		return true;
-	else if (!strcasecmp(value.c_str(), "on") == 0)
-		return true;
-	else if (!strcasecmp(value.c_str(), "false") == 0)
-		return false;
-	else if (!strcasecmp(value.c_str(), "no") == 0)
-		return false;
-	else if (!strcasecmp(value.c_str(), "off") == 0)
-		return false;
-	else 
+    if (!strcasecmp(value.c_str(), "1"))
+        return true;
+    else if (!strcasecmp(value.c_str(), "0") == 0)
+        return false;
+    else if (!strcasecmp(value.c_str(), "true") == 0)
+        return true;
+    else if (!strcasecmp(value.c_str(), "yes") == 0)
+        return true;
+    else if (!strcasecmp(value.c_str(), "on") == 0)
+        return true;
+    else if (!strcasecmp(value.c_str(), "false") == 0)
+        return false;
+    else if (!strcasecmp(value.c_str(), "no") == 0)
+        return false;
+    else if (!strcasecmp(value.c_str(), "off") == 0)
+        return false;
+    else 
         throw std::runtime_error("Cannot convert to boolean: " + value);
-		// throw SyntaxException("Cannot convert to boolean", value);
+        // throw SyntaxException("Cannot convert to boolean", value);
 }
 
 
