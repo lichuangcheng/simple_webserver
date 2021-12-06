@@ -144,7 +144,8 @@ void check_result(simpleweb::IniConfig &conf)
    assert(conf.get_bool("booleans.onoff_false") == expected_onoff_false);
 }
 
-int main(int argc, char const *argv[])
+int main([[maybe_unused]] int argc, 
+         [[maybe_unused]] char const *argv[])
 {
     simpleweb::IniConfig conf;
     auto ss = make_file();
