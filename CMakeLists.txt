@@ -22,7 +22,7 @@ target_link_options(${PROJECT_NAME}
 )
 target_compile_features(${PROJECT_NAME} 
     PUBLIC 
-        cxx_std_17
+        cxx_std_20
 )
 target_include_directories(${PROJECT_NAME} 
     PUBLIC 
