@@ -24,6 +24,9 @@ using simpleweb::iequals;
 using simpleweb::IniConfig;
 using simpleweb::HttpRequest;
 
+using std::cout;
+using std::endl;
+
 void error_exit(const char *s)
 {
     perror(s);
@@ -73,6 +76,7 @@ bool parse_request_header(std::string_view d, HttpRequest &req)
 bool parse_request(const char *d, size_t n, HttpRequest &req)
 {
     std::string_view str(d, n);
+    const auto npos = str.npos;
     auto crlf = str.find("\r\n");
     if (crlf == str.npos) return false;
 
@@ -85,7 +89,7 @@ bool parse_request(const char *d, size_t n, HttpRequest &req)
     auto begin = crlf + 2;
     while(begin < str.size() && (crlf = str.find("\r\n", begin)) != str.npos && crlf != 0)
     {
-        std::string_view pair = str.substr(begin, crlf);
+        std::string_view pair = str.substr(begin, crlf - begin);
         auto sep = pair.find(':');
         if (sep != pair.npos)
         {
@@ -94,9 +98,9 @@ bool parse_request(const char *d, size_t n, HttpRequest &req)
         begin = crlf + 2;
     }
 
-    for (auto & [key, value]: req.headers)
+    for (auto & [name, value]: req.headers)
     {
-        std::cout << key << ": " << value << "\n";
+        std::cout << name << ": " << value << "\n";
     }
     std::cout << std::endl;
     return true;
@@ -117,10 +121,16 @@ int request_process(int sock, const std::string &index_html)
     int n = 0;
     if((n = recv(sock, buf.data(), buf.size() - 1, 0)) > 0)
     {
+        buf[n] = '\0';
+        cout << buf.data();
+        cout << "=====================================" << endl;
         parse_request(buf.data(), n, req);
 
-        auto rep = ss.str();
-        send(sock, rep.data(), rep.size(), 0);
+        if (iequals(req.method, "GET"))
+        {
+            auto rep = ss.str();
+            send(sock, rep.data(), rep.size(), 0);
+        }
     }
     return n;
 }
