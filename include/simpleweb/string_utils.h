@@ -5,6 +5,7 @@
 #include <string>
 #include <string_view>
 #include <algorithm>
+#include <vector>
 
 
 namespace simpleweb {
@@ -66,6 +67,22 @@ bool iequals(std::string_view a, std::string_view b)
                       [](uint8_t a, uint8_t b) {
                           return std::tolower(a) == std::tolower(b);
                       });
+}
+
+
+std::vector<std::string_view> split(std::string_view s, std::string_view delimiter)
+{
+    size_t start = 0;
+    size_t found = s.npos;
+    std::vector<std::string_view> res;
+
+    while((found = s.find(delimiter, start)) != s.npos)
+    {
+        res.push_back(s.substr(start, found - start));
+        start = found + delimiter.length();
+    }
+    if (start != s.size()) res.push_back(s.substr(start));
+    return res;
 }
 
 
