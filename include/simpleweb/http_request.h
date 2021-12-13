@@ -36,6 +36,21 @@ public:
 };
 
 
+template <typename Os>
+Os& operator << (Os &os, const simpleweb::HttpRequest &req)
+{
+    os << "method: "  << req.method  << "\n"
+       << "url: "     << req.path    << "\n"
+       << "version: " << req.version << "\n";
+
+    for (const auto &[name, value] : req.headers)
+    {
+        os << name << ": " << value << "\n";
+    }
+    return os;
+}
+
+
 } // namespace simpleweb
 
 

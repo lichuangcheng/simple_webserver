@@ -20,6 +20,7 @@
 #include "simpleweb/string_utils.h"
 #include "simpleweb/http_request.h"
 
+using simpleweb::trim;
 using simpleweb::iequals;
 using simpleweb::IniConfig;
 using simpleweb::HttpRequest;
@@ -44,7 +45,6 @@ std::string readfile(const char *file)
     return ss.str();
 }
 
-
 bool parse_request_header(std::string_view d, HttpRequest &req)
 {
     static const std::set<std::string> methods {
@@ -58,7 +58,7 @@ bool parse_request_header(std::string_view d, HttpRequest &req)
     size_t i = 0;
     auto n = d.size();
     while(!std::isspace(d[i]) && i < n) { method += d[i]; i++; }
-    if (!methods.contains(method)) return false;
+    if (!methods.contains(simpleweb::to_upper(method))) return false;
 
     while(std::isspace(d[i])) i++;
     while(!isspace(d[i]) && i < n) { url += d[i]; i++; }
@@ -72,40 +72,29 @@ bool parse_request_header(std::string_view d, HttpRequest &req)
     return true;
 }
 
-
 bool parse_request(const char *d, size_t n, HttpRequest &req)
 {
     std::string_view str(d, n);
     const auto npos = str.npos;
     auto crlf = str.find("\r\n");
-    if (crlf == str.npos) return false;
+    if (crlf == npos) return false;
 
     if (!parse_request_header(str.substr(0, crlf), req)) return false;
-    
-    std::cout << "method: "  << req.method  << "\n"
-              << "url: "     << req.path    << "\n"
-              << "version: " << req.version << std::endl;
     
     auto begin = crlf + 2;
     while(begin < str.size() && (crlf = str.find("\r\n", begin)) != str.npos && crlf != 0)
     {
-        std::string_view pair = str.substr(begin, crlf - begin);
-        auto sep = pair.find(':');
-        if (sep != pair.npos)
+        std::string_view line = str.substr(begin, crlf - begin);
+        auto sep = line.find(':');
+        if (sep != line.npos)
         {
-            req.headers.emplace(pair.substr(0, sep), pair.substr(sep + 1));
+            req.headers.emplace(line.substr(0, sep), trim(line.substr(sep + 1)));
         }
         begin = crlf + 2;
     }
 
-    for (auto & [name, value]: req.headers)
-    {
-        std::cout << name << ": " << value << "\n";
-    }
-    std::cout << std::endl;
     return true;
 }
-
 
 int request_process(int sock, const std::string &index_html)
 {
@@ -115,22 +104,18 @@ int request_process(int sock, const std::string &index_html)
     ss << "Content-Length: " << index_html.size() << "\r\n";
     ss << "\r\n";
     ss << index_html;
+    auto rep = ss.str();
 
-    HttpRequest req;
     std::array<char, 4096> buf;
     int n = 0;
     if((n = recv(sock, buf.data(), buf.size() - 1, 0)) > 0)
     {
-        buf[n] = '\0';
-        cout << buf.data();
-        cout << "=====================================" << endl;
+        HttpRequest req;
         parse_request(buf.data(), n, req);
+        cout << req << endl;
 
         if (iequals(req.method, "GET"))
-        {
-            auto rep = ss.str();
             send(sock, rep.data(), rep.size(), 0);
-        }
     }
     return n;
 }
