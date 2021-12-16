@@ -20,6 +20,7 @@
 #include "simpleweb/ini_config.h"
 #include "simpleweb/string_utils.h"
 #include "simpleweb/http_request.h"
+#include "simpleweb/socket.h"
 
 using simpleweb::trim;
 using simpleweb::iequals;
@@ -155,32 +156,6 @@ int request_process(int sock, const std::string &root)
     return n;
 }
 
-int create_tcp_server(uint16_t port)
-{
-    int sock = socket(AF_INET, SOCK_STREAM, 0);
-    if (sock == -1) 
-        error_exit("open socket failed");
-
-    struct sockaddr_in addr;
-    addr.sin_family = AF_INET;
-    addr.sin_port = htons(port);
-    addr.sin_addr.s_addr = htonl(INADDR_ANY);
-
-    int on = 1;
-    if ((setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on))) < 0) 
-        error_exit("setsockopt failed");
-    if ((setsockopt(sock, SOL_SOCKET, SO_REUSEPORT, &on, sizeof(on))) < 0) 
-        error_exit("setsockopt failed");
-
-    if (bind(sock, (struct sockaddr *)&addr, sizeof(addr)) != 0)
-        error_exit("bind failed");
-
-    if (listen(sock, 20) != 0)
-        error_exit("listen failed");
-
-    return sock;
-}
-
 int main(int argc, char const *argv[])
 {
     if (argc != 2)
@@ -193,7 +168,7 @@ int main(int argc, char const *argv[])
     uint16_t port        = conf.get_int32("server.port");
     std::string root_dir = conf.get_string("server.root");
 
-    int sock = create_tcp_server(port);
+    int sock = simpleweb::Socket::create_tcpv4_server(port);
     printf("root: %s \n", root_dir.c_str());
     printf("listen on 0.0.0.0:%d\n", port);
     
