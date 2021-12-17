@@ -1,137 +1,61 @@
-#include <stdio.h>
-#include <string.h>
 #include <unistd.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
-#include <sys/select.h>
-#include <thread>
+#include <sys/epoll.h>
 #include <string>
 #include <vector>
 #include <fstream>
-#include <sstream>
 #include <array>
-#include <set>
 #include <string_view>
-#include <assert.h>
-#include <algorithm>
 #include <iostream>
 #include <filesystem>
 
 #include "simpleweb/ini_config.h"
 #include "simpleweb/string_utils.h"
 #include "simpleweb/http_request.h"
+#include "simpleweb/http_response.h"
+#include "simpleweb/error.h"
 #include "simpleweb/socket.h"
-
-using simpleweb::trim;
-using simpleweb::iequals;
-using simpleweb::IniConfig;
-using simpleweb::HttpRequest;
 
 using std::cout;
 using std::endl;
+
 namespace fs = std::filesystem;
-
-const std::string_view server_name = "simple webserver";
-
-void error_exit(const char *s)
-{
-    perror(s);
-    exit(1);
-}
+using namespace simpleweb;
 
 std::string readfile(const char *file)
 {
-    printf("request file: %s \n", file);
-    std::ifstream fin(file);
-    if (!fin)
-        return {};
-
-    std::ostringstream ss;
-    ss << fin.rdbuf();
-    return ss.str();
+    std::string out;
+    std::ifstream fs(file, std::ios_base::binary);
+    fs.seekg(0, std::ios_base::end);
+    auto size = fs.tellg();
+    fs.seekg(0);
+    out.resize(static_cast<size_t>(size));
+    fs.read(&out[0], static_cast<std::streamsize>(size));
+    return out;
 }
 
-void not_found(int sock)
+void not_found(HttpResponse &res)
 {
-    static const std::string_view text = "404 NOT FOUND";
-    std::ostringstream ss;
-    ss << "HTTP/1.0 404 NOT FOUND\r\n";
-    ss << "Content-Type: text/html;charset=utf-8\r\n";
-    ss << "Content-Length: " << text.size() << "\r\n";
-    ss << "\r\n";
-    ss << text;
-    auto rep = ss.str();
-    send(sock, rep.data(), rep.size(), 0);
+    static const std::string text = "404 NOT FOUND";
+    res.status = 404;
+    res.set_content(text, "text/html;charset=utf-8");
 }
 
-void request_file(int sock, const std::string &root, const std::string &path)
+void request_file(const std::string &root, const HttpRequest &req, HttpResponse &res)
 {
-    // auto file = readfile(fs::absolute(root).append(path).c_str());
-    auto file = readfile((root + path).c_str());
-    if (file.empty()) return not_found(sock);
+    printf("request file: %s \n", req.path.c_str());
+    auto full_path = root + req.path;
+    if (req.path == "/") full_path += "index.html";
+    cout << "full path: " << full_path << endl;
 
-    std::ostringstream ss;
-    ss << "HTTP/1.0 200 OK\r\n";
-    ss << "Content-Type: text/html;charset=utf-8\r\n";
-    ss << "Content-Length: " << file.size() << "\r\n";
-    ss << "\r\n";
-    ss << file;
-    auto rep = ss.str();
-    send(sock, rep.data(), rep.size(), 0);
-}
+    if (!fs::exists(full_path) || !fs::is_regular_file(full_path))
+        return not_found(res);
 
-bool parse_request_header(std::string_view d, HttpRequest &req)
-{
-    static const std::set<std::string> methods {
-      "GET",     "HEAD",    "POST",  "PUT",   "DELETE",
-      "CONNECT", "OPTIONS", "TRACE", "PATCH", "PRI"};
-
-    std::string method;
-    std::string url;
-    std::string version;
-
-    size_t i = 0;
-    auto n = d.size();
-    while(!std::isspace(d[i]) && i < n) { method += d[i]; i++; }
-    if (!methods.contains(simpleweb::to_upper(method))) return false;
-
-    while(std::isspace(d[i])) i++;
-    while(!isspace(d[i]) && i < n) { url += d[i]; i++; }
-
-    while(std::isspace(d[i])) i++;
-    while(!isspace(d[i]) && i < n) { version += d[i]; i++; }
-
-    req.method = std::move(method);
-    req.version = std::move(version);
-    // TODO: 解析 params
-    req.path = url.substr(0, url.find('?'));
-    req.target = std::move(url);
-    
-    return true;
-}
-
-bool parse_request(const char *d, size_t n, HttpRequest &req)
-{
-    std::string_view str(d, n);
-    const auto npos = str.npos;
-    auto crlf = str.find("\r\n");
-    if (crlf == npos) return false;
-
-    if (!parse_request_header(str.substr(0, crlf), req)) return false;
-    
-    auto begin = crlf + 2;
-    while(begin < str.size() && (crlf = str.find("\r\n", begin)) != str.npos && crlf != 0)
-    {
-        std::string_view line = str.substr(begin, crlf - begin);
-        auto sep = line.find(':');
-        if (sep != line.npos)
-        {
-            req.headers.emplace(line.substr(0, sep), trim(line.substr(sep + 1)));
-        }
-        begin = crlf + 2;
-    }
-
-    return true;
+    auto file = readfile((root + req.path).c_str());
+    res.set_content(std::move(file), "text/plain;charset=utf-8");
+    res.status = 200;
+    return;
 }
 
 int request_process(int sock, const std::string &root)
@@ -141,17 +65,17 @@ int request_process(int sock, const std::string &root)
     if((n = recv(sock, buf.data(), buf.size() - 1, 0)) > 0)
     {
         HttpRequest req;
-        parse_request(buf.data(), n, req);
-        cout << req << endl;
-
+        HttpResponse res;
+        res.version = "HTTP/1.0";
+        req.parse(std::string_view(buf.data(), n));
         if (iequals(req.method, "GET"))
-        {
-            if (req.path == "/")
-                request_file(sock, root, "/index.html");
-            else 
-                request_file(sock, root, req.path);
-        }
-            
+            request_file(root, req, res);
+        else 
+            res.status = 400;
+        res.reason = HttpResponse::status_message(res.status);
+        res.headers["Server"] = "simpleweb/0.1.0";
+        auto s = res.to_string();
+        send(sock, s.data(), s.size(), 0);
     }
     return n;
 }
@@ -172,73 +96,69 @@ int main(int argc, char const *argv[])
     printf("root: %s \n", root_dir.c_str());
     printf("listen on 0.0.0.0:%d\n", port);
     
-    int client_sock = -1;
-    struct sockaddr_in client_name;
-    socklen_t client_name_len = sizeof(client_name);
+    auto epfd = epoll_create(1);
+    if (epfd < 0) error_exit("epoll_create");
 
-    fd_set readfds;
-    FD_ZERO(&readfds);
+    epoll_event svr_ev;
+    svr_ev.events = EPOLLIN;
+    svr_ev.data.fd = sock;
+    epoll_ctl(epfd, EPOLL_CTL_ADD, sock, &svr_ev);
 
-    std::vector<int> client_fds;
-    client_fds.reserve(1024);
-
+    std::array<epoll_event, 1024> events;
     while(1)
     {
-        // struct timeval tv = {1, 0};
-        FD_ZERO(&readfds);
-        FD_SET(sock, &readfds);
-        
-        int max_fd = sock;
-        for (int fd : client_fds)
+        int n = epoll_wait(epfd, events.data(), events.size(), -1);
+        if (n == 0)
         {
-            if (fd != -1)
-            {
-                FD_SET(fd, &readfds);
-                max_fd = std::max(max_fd, fd);
-            }
-        }
-
-        int retval = select(max_fd + 1, &readfds, NULL, NULL, NULL);
-        if (retval == 0)
-        {
-            printf("selcet timeout.\n");
+            printf("epoll_wait timeout!");
             continue;
         }
-        if (retval < 0) error_exit("select");
-
-        if (FD_ISSET(sock, &readfds))
+        if (n < 0)
         {
-            client_sock = accept(sock, (struct sockaddr *)&client_name, &client_name_len);
-            if (client_sock == -1) 
-                error_exit("accept failed");
-
-            printf("accept connection: %s\n", inet_ntoa(client_name.sin_addr));
-            client_fds.push_back(client_sock);
-            if (client_fds.size() > 64)
-            {
-                client_fds.erase(std::remove_if(client_fds.begin(), client_fds.end(), [](int fd) { return fd == -1; }), 
-                                client_fds.end());
-            }
+            if (errno == EINTR) continue;
+            else break;
         }
-        else 
+
+        for (int i = 0; i < n; i++)
         {
-            for (size_t i = 0; i < client_fds.size(); ++i)
+            if (events[i].data.fd == sock && events[i].events & EPOLLIN)
             {
-                int fd = client_fds[i];
-                if (fd != -1 && FD_ISSET(fd, &readfds))
+                struct sockaddr_in client_name;
+                socklen_t client_name_len = sizeof(client_name);
+                int connfd = accept(events[i].data.fd, (struct sockaddr *)&client_name, &client_name_len);
+                if (connfd == -1) 
+                    error_exit("accept failed");
+
+                printf("accept connection: %s:%d\n", inet_ntoa(client_name.sin_addr), ntohs(client_name.sin_port));
+
+                simpleweb::Socket::set_noblock(connfd);
+                epoll_event ev;
+                ev.events = EPOLLIN;
+                ev.data.fd = connfd;
+                epoll_ctl(epfd, EPOLL_CTL_ADD, connfd, &ev);
+            }
+            else 
+            {
+                if (events[i].events & EPOLLIN)
                 {
+                    int fd = events[i].data.fd;
                     int n = request_process(fd, root_dir);
                     if (n == 0)
                     {
                         printf("connection close!\n");
+                        epoll_ctl(epfd, EPOLL_CTL_DEL, fd, NULL);
                         close(fd);
-                        client_fds[i] = -1;
                     }
-                    if (n < 0 && (errno != EINTR || errno != EWOULDBLOCK))
+                    if (n < 0)
                     {
-                        perror("read");
-                        close(fd);
-                        client_fds[i] = -1;
+                        if (errno == EWOULDBLOCK || errno == EINTR) 
+                            continue;
+                        else 
+                        {
+                            perror("recv");
+                            epoll_ctl(epfd, EPOLL_CTL_DEL, fd, NULL);
+                            close(fd);
+                        }
                     }
                 }
             }

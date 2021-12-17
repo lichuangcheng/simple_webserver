@@ -2,6 +2,7 @@
 #define SIMPLEWEB_HTTP_REQUEST_INCLUDED
 
 
+#include <ostream>
 #include <string>
 #include <map>
 
@@ -33,22 +34,14 @@ public:
     void set_header(const char *key, const char *val);
     void set_header(const char *key, const std::string &val);
     bool has_param(const char *key) const;
+
+    bool parse(std::string_view str);
+
+    friend std::ostream& operator << (std::ostream &os, const simpleweb::HttpRequest &req);
+private:
+    bool parse_request_header(std::string_view d);
+
 };
-
-
-template <typename Os>
-Os& operator << (Os &os, const simpleweb::HttpRequest &req)
-{
-    os << "method: "  << req.method  << "\n"
-       << "url: "     << req.path    << "\n"
-       << "version: " << req.version << "\n";
-
-    for (const auto &[name, value] : req.headers)
-    {
-        os << name << ": " << value << "\n";
-    }
-    return os;
-}
 
 
 } // namespace simpleweb

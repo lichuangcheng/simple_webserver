@@ -9,7 +9,7 @@
 namespace simpleweb {
 
 
-void error_exit(const char *s)
+inline void error_exit(const char *s)
 {
     perror(s);
     exit(1);

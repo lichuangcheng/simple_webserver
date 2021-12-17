@@ -1,6 +1,7 @@
 #include "simpleweb/socket.h"
 #include "simpleweb/error.h"
 #include <string>
+#include <functional>
 
 #include <netinet/in.h>
 #include <arpa/inet.h>
@@ -8,6 +9,7 @@
 
 
 namespace simpleweb {
+
 
 
 int Socket::create_tcpv4_server(int port)
@@ -24,10 +26,12 @@ int Socket::create_tcpv4_server(int port)
     int on = 1;
     setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on));
 
+    Socket::set_noblock(sock);
+
     if (bind(sock, (struct sockaddr *)&addr, sizeof(addr)) != 0)
         error_exit("bind failed");
 
-    if (listen(sock, 1024) != 0)
+    if (listen(sock, SOMAXCONN) != 0)
         error_exit("listen failed");
 
     return sock;
@@ -41,6 +45,21 @@ void Socket::set_blocking(int fd, bool flag)
     if (!flag)
         flags |= O_NONBLOCK;
     (void)fcntl(fd, F_SETFL, flags);
+}
+
+
+void Socket::set_noblock(int fd) 
+{
+    Socket::set_blocking(fd, false);
+}
+
+
+int Socket::socket_err(int sock) 
+{
+    int result(0);
+    socklen_t len = sizeof(result);
+    ::getsockopt(sock, SOL_SOCKET, SO_ERROR, reinterpret_cast<char*>(&result), &len);
+	return result;
 }
 
 
