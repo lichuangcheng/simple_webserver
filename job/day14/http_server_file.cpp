@@ -9,6 +9,8 @@
 #include <string_view>
 #include <iostream>
 #include <filesystem>
+#include <unordered_map>
+#include <optional>
 
 #include "simpleweb/ini_config.h"
 #include "simpleweb/string_utils.h"
@@ -23,7 +25,32 @@ using std::endl;
 namespace fs = std::filesystem;
 using namespace simpleweb;
 
-std::string readfile(const char *file)
+std::optional<std::string> file_media_type(const std::string &ext)
+{
+    static const std::unordered_map<std::string, std::string> media_type = {
+        {".css",  "text/css"},
+        {".txt",  "text/plain;charset=utf-8"},
+        {".html",  "text/html;charset=utf-8"},
+
+        {".gif",  "image/gif"},
+        {".png",  "image/png"},
+        {".ico",  "image/x-icon"},
+        {".jpeg",  "image/jpeg"},
+
+        {".pdf", "application/pdf"},
+        {".js", "application/javascript"},
+        {".json", "application/json"},
+
+        {".xml", "application/xml"},
+        {".gz", "application/gzip"},
+        {".zip", "application/zip"},
+    };
+    auto it = media_type.find(ext);
+    if (it != media_type.end()) return it->second;
+    return std::nullopt;
+}
+
+std::string readfile(const std::string &file)
 {
     std::string out;
     std::ifstream fs(file, std::ios_base::binary);
@@ -58,8 +85,9 @@ void request_file(const std::string &root, const HttpRequest &req, HttpResponse 
     if (!fs::exists(full_path) || !fs::is_regular_file(full_path))
         return not_found(res);
 
-    auto file = readfile((root + req.path).c_str());
-    res.set_content(std::move(file), "text/plain;charset=utf-8");
+    auto file = readfile(full_path);
+    auto type = file_media_type(fs::path(full_path).extension());
+    res.set_content(std::move(file), type.value_or("text/plain;charset=utf-8"));
     res.status = 200;
     return;
 }

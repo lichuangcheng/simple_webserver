@@ -22,7 +22,7 @@ struct HttpResponse
     void set_header(const char *key, const std::string &val);
 
     void set_content(const char *s, size_t n, const char *content_type);
-    void set_content(const std::string &s, const char *content_type);
+    void set_content(const std::string &s, const std::string &content_type);
 
     void write(std::ostream &ostr) const;
     std::string to_string() const;
@@ -54,7 +54,7 @@ inline std::string HttpResponse::to_string() const
 }
 
 
-inline void HttpResponse::set_content(const std::string &s, const char *content_type) 
+inline void HttpResponse::set_content(const std::string &s, const std::string &content_type) 
 {
     body = s;
     headers["Content-Type"] = content_type;
