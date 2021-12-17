@@ -60,7 +60,7 @@ inline std::string to_lower(std::string s)
 }
 
 
-bool iequals(std::string_view a, std::string_view b)
+inline bool iequals(std::string_view a, std::string_view b)
 {
     return std::equal(a.begin(), a.end(),
                       b.begin(), b.end(),
@@ -70,7 +70,7 @@ bool iequals(std::string_view a, std::string_view b)
 }
 
 
-std::vector<std::string_view> split(std::string_view s, std::string_view delimiter)
+inline std::vector<std::string_view> split(std::string_view s, std::string_view delimiter)
 {
     size_t start = 0;
     size_t found = s.npos;
