@@ -42,6 +42,12 @@ void not_found(HttpResponse &res)
     res.set_content(text, "text/html;charset=utf-8");
 }
 
+void unimplemented(HttpResponse &res)
+{
+    res.status = 501;
+    res.set_content("Method Not Implemented", "text/html;charset=utf-8");
+}
+
 void request_file(const std::string &root, const HttpRequest &req, HttpResponse &res)
 {
     printf("request file: %s \n", req.path.c_str());
@@ -71,7 +77,7 @@ int request_process(int sock, const std::string &root)
         if (iequals(req.method, "GET"))
             request_file(root, req, res);
         else 
-            res.status = 400;
+            unimplemented(res);
         res.reason = HttpResponse::status_message(res.status);
         res.headers["Server"] = "simpleweb/0.1.0";
         auto s = res.to_string();
