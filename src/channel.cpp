@@ -30,7 +30,7 @@ void Channel::disable_write()
 void Channel::close_fd()
 {
     if (fd_ != -1)
-        close(fd_);
+        ::close(fd_);
 }
 
 
@@ -39,4 +39,4 @@ Channel::~Channel()
 }
 
 
-}; // namespace simpleweb
+} // namespace simpleweb

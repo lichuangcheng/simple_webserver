@@ -59,17 +59,23 @@ int EventDispatcher::dispatch(struct timeval *timeval)
     }
 
     for (int i = 0; i < n; i++) {
+        auto &ev = events[i];
         auto channel = (Channel *)events[i].data.ptr;
-        if ((events[i].events & EPOLLERR) || (events[i].events & EPOLLHUP)) {
-            fprintf(stderr, "epoll error\n");
-            channel->error();
-            continue;
+
+        if ((ev.events & EPOLLHUP) && !(ev.events & EPOLLIN)) {
+            printf("[warn] fd = %d , EventDispatcher::dispatch() EPOLLHUP\n", channel->fd());
+            channel->close();
         }
 
-        if (events[i].events & EPOLLIN)
+        if ((ev.events & EPOLLERR) /* || (ev.events & EPOLLHUP) */ ) {
+            fprintf(stderr, "epoll error\n");
+            channel->error();
+        }
+
+        if (ev.events & EPOLLIN)
             channel->read();
 
-        if (events[i].events & EPOLLOUT) 
+        if (ev.events & EPOLLOUT) 
             channel->write();
     }
 

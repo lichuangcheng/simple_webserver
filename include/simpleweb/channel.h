@@ -53,7 +53,7 @@ protected:
     virtual void read() {}
     virtual void write() {}
     virtual void error() {}
-    virtual void disconnect() {}
+    virtual void close() {}
 
 private:
     Channel(const Channel &) = delete;
@@ -103,9 +103,9 @@ public:
     }
 
     template <typename F, typename ...Args>
-    ChannelAdaptor* disconnect(F &&f, Args&& ...args)
+    ChannelAdaptor* close(F &&f, Args&& ...args)
     {
-        disconn_fn_ = std::bind(std::forward<F>(f), std::forward<Args>(args)...);
+        close_fn_ = std::bind(std::forward<F>(f), std::forward<Args>(args)...);
         return this;
     }
 
@@ -126,15 +126,15 @@ protected:
         if (error_fn_) error_fn_();
     }
 
-    void disconnect() override
+    void close() override
     {
-        if (disconn_fn_) disconn_fn_();
+        if (close_fn_) close_fn_();
     }
 private:
     event_callback read_fn_;
     event_callback write_fn_;
     event_callback error_fn_;
-    event_callback disconn_fn_;
+    event_callback close_fn_;
 };
 
 

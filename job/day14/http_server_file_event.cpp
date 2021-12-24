@@ -140,7 +140,7 @@ int main(int argc, char const *argv[])
     epoll_ctl(epfd, EPOLL_CTL_ADD, sock, &svr_ev);
 
     EventLoop ev_loop;
-    auto accept_chan = ChannelAdaptor::create(sock, EPOLLIN, &ev_loop);
+    auto accept_chan = std::make_shared<ChannelAdaptor>(sock, EPOLLIN, &ev_loop);
 
     accept_chan->read([&] 
     {
@@ -180,7 +180,7 @@ int main(int argc, char const *argv[])
         });
         ev_loop.add_channel(conn_chan);
     });
-    ev_loop.add_channel(accept_chan);
+    ev_loop.add_channel(accept_chan.get());
 
     ev_loop.run();
     close(sock);
