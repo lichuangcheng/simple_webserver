@@ -41,7 +41,7 @@ int EventLoop::do_channel_event(ChannelPtr channel, int type)
         pending_list.push_back(std::make_pair(channel, type));
     }
 
-    if (!is_in_same_thread()) 
+    if (!is_in_loop_thread()) 
         wakeup();
     else 
         handle_pending_channel();
@@ -51,21 +51,21 @@ int EventLoop::do_channel_event(ChannelPtr channel, int type)
 
 int EventLoop::add_channel(ChannelPtr channel) 
 {
-    if (is_in_same_thread())
+    if (is_in_loop_thread())
         return handle_pending_add(channel);
     return do_channel_event(channel, 1);
 }
 
 int EventLoop::remove_channel(ChannelPtr channel) 
 {
-    if (is_in_same_thread())
+    if (is_in_loop_thread())
         return handle_pending_remove(channel);
     return do_channel_event(channel, 2);
 }
 
 int EventLoop::update_channel(ChannelPtr channel) 
 {
-    if (is_in_same_thread())
+    if (is_in_loop_thread())
         return handle_pending_update(channel);
     return do_channel_event(channel, 3);
 }
@@ -167,7 +167,7 @@ EventLoop::EventLoop(const std::string &thread_name)
  */
 int EventLoop::run() 
 {
-    assert_in_same_thread();
+    assert_in_loop_thread();
 
     printf("event loop run, %s\n", this->thread_name.c_str());
     struct timeval timeval;
@@ -188,11 +188,11 @@ int EventLoop::run()
 void EventLoop::stop() 
 {
     quit = 1;
-    if (!is_in_same_thread())
+    if (!is_in_loop_thread())
         wakeup();
 }
 
-void EventLoop::assert_in_same_thread()
+void EventLoop::assert_in_loop_thread()
 {
     if (owner_thread_id != std::this_thread::get_id())
         printf("warning: no in same thread");
@@ -200,7 +200,7 @@ void EventLoop::assert_in_same_thread()
     assert(owner_thread_id == std::this_thread::get_id());
 }
 
-int EventLoop::is_in_same_thread()
+int EventLoop::is_in_loop_thread()
 {
     return owner_thread_id == std::this_thread::get_id();
 }

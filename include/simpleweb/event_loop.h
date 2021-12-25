@@ -37,9 +37,9 @@ public:
     // res: EVENT_READ | EVENT_READ等
     int channel_event_activate(int revents);
 
-    void assert_in_same_thread();
+    void assert_in_loop_thread();
 
-    int is_in_same_thread();
+    int is_in_loop_thread();
 
     ~EventLoop();
 protected:
