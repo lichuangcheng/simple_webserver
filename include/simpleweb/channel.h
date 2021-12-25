@@ -13,11 +13,9 @@ namespace simpleweb {
 class EventLoop;
 
 
-class Channel
+class Channel : public std::enable_shared_from_this<Channel>
 {
 public:
-    using ChannlePtr = std::shared_ptr<Channel>;
-
     Channel(int fd, uint32_t ev, EventLoop *loop) : fd_{fd}, events_(ev), loop_(loop)
     {
     }
@@ -64,6 +62,7 @@ private:
     EventLoop *loop_{nullptr};
 };
 
+using ChannelPtr = std::shared_ptr<Channel>;
 
 class ChannelAdaptor : public Channel
     /// Channel 类型的适配器

@@ -16,14 +16,14 @@ int Channel::is_enabled_write() const
 void Channel::enable_write()
 {
     events_ = events_ | EPOLLOUT;
-    loop_->update_channel(this);
+    loop_->update_channel(shared_from_this());
 }
 
 
 void Channel::disable_write()
 {
     events_ = events_ & ~EPOLLOUT;
-    loop_->update_channel(this);
+    loop_->update_channel(shared_from_this());
 }
 
 
@@ -36,6 +36,7 @@ void Channel::close_fd()
 
 Channel::~Channel()
 {
+    printf("[info] Channel::~Channel() fd == %d\r\n", fd_);
 }
 
 

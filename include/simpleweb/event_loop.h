@@ -25,13 +25,13 @@ public:
     void wakeup();
 
     // 增加通道事件
-    int add_channel(Channel *channel);
+    int add_channel(ChannelPtr channel);
 
-    int remove_channel(Channel *channel);
+    int remove_channel(ChannelPtr channel);
 
-    int update_channel(Channel *channel);
+    int update_channel(ChannelPtr channel);
 
-    bool has_channel(Channel *channel);
+    bool has_channel(ChannelPtr channel);
 
     // dispather派发完事件之后，调用该方法通知EventLoop执行对应事件的相关callback方法
     // res: EVENT_READ | EVENT_READ等
@@ -43,14 +43,14 @@ public:
 
     ~EventLoop();
 protected:
-    int handle_pending_add(Channel *channel);
+    int handle_pending_add(ChannelPtr channel);
 
-    int handle_pending_remove(Channel *channel);
+    int handle_pending_remove(ChannelPtr channel);
 
-    int handle_pending_update(Channel *channel);
+    int handle_pending_update(ChannelPtr channel);
 private:
     int handle_pending_channel();
-    int do_channel_event(Channel *channel, int type);
+    int do_channel_event(ChannelPtr channel, int type);
     void handle_wakeup();
 
     int quit;
@@ -60,8 +60,10 @@ private:
 
     std::unique_ptr<EventDispatcher> eventDispatcher;
 
-    typedef std::pair<Channel*, int> ChannelElement;
+    typedef std::pair<ChannelPtr, int> ChannelElement;
     std::vector<ChannelElement> pending_list;
+
+    std::map<int, std::shared_ptr<Channel>> channels_;
 
     std::mutex mutex;
     int socketPair[2];

@@ -31,7 +31,7 @@ int EventLoop::handle_pending_channel()
     return 0;
 }
 
-int EventLoop::do_channel_event(Channel *channel, int type) 
+int EventLoop::do_channel_event(ChannelPtr channel, int type) 
 {
     {
         // scope lock
@@ -49,21 +49,21 @@ int EventLoop::do_channel_event(Channel *channel, int type)
     return 0;
 }
 
-int EventLoop::add_channel(Channel *channel) 
+int EventLoop::add_channel(ChannelPtr channel) 
 {
     if (is_in_same_thread())
         return handle_pending_add(channel);
     return do_channel_event(channel, 1);
 }
 
-int EventLoop::remove_channel(Channel *channel) 
+int EventLoop::remove_channel(ChannelPtr channel) 
 {
     if (is_in_same_thread())
         return handle_pending_remove(channel);
     return do_channel_event(channel, 2);
 }
 
-int EventLoop::update_channel(Channel *channel) 
+int EventLoop::update_channel(ChannelPtr channel) 
 {
     if (is_in_same_thread())
         return handle_pending_update(channel);
@@ -71,26 +71,43 @@ int EventLoop::update_channel(Channel *channel)
 }
 
 // in the i/o thread
-int EventLoop::handle_pending_add(Channel *channel) 
+int EventLoop::handle_pending_add(ChannelPtr channel) 
 {
+    if (!channel || channel->fd() < 0) return -1;
+    if (channels_.contains(channel->fd())) {
+        printf("重复的 fd = %d \r\n", channel->fd());
+        return -1;
+    }
+
+    channels_[channel->fd()] = channel;
     printf("add channel fd == %d, %s \n", channel->fd(), this->thread_name.c_str());
-    return eventDispatcher->add(channel);
+    return eventDispatcher->add(channel.get());
 }
 
 // in the i/o thread
-int EventLoop::handle_pending_remove(Channel *channel) 
+int EventLoop::handle_pending_remove(ChannelPtr channel) 
 {
-    printf("remove channel fd == %d, %s \n", channel->fd(), this->thread_name.c_str());
-    return eventDispatcher->del(channel);
+    auto it = channels_.find(channel->fd());
+    if (it != channels_.end()) {
+        assert(it->second == channel);
+        printf("remove channel fd == %d, %s \n", channel->fd(), this->thread_name.c_str());
+        eventDispatcher->del(channel.get());
+        channels_.erase(it);
+    }
+    return 0;
 }
 
 // in the i/o thread
-int EventLoop::handle_pending_update(Channel *channel) 
+int EventLoop::handle_pending_update(ChannelPtr channel) 
 {
-    printf("update channel fd == %d, %s \n", channel->fd(), thread_name.c_str());
-    return eventDispatcher->update(channel);
+    auto it = channels_.find(channel->fd());
+    if (it != channels_.end()) {
+        assert(it->second == channel);
+        printf("update channel fd == %d, %s \n", channel->fd(), thread_name.c_str());
+        eventDispatcher->update(channel.get());
+    }
+    return 0;
 }
-
 
 void EventLoop::wakeup() 
 {
@@ -136,7 +153,9 @@ EventLoop::EventLoop(const std::string &thread_name)
     pending_list.reserve(64);
     
     // TODO: 管理 Channle 的内存; 在析构时正确释放
-    auto wakeup_chan = ChannelAdaptor::create(socketPair[1], EPOLLIN, this)->read(&EventLoop::handle_wakeup, this);
+    auto wakeup_chan = std::make_shared<ChannelAdaptor>(socketPair[1], EPOLLIN, this);
+    wakeup_chan->read(&EventLoop::handle_wakeup, this);
+
     printf("wakeup fd == %d\n", wakeup_chan->fd());
     add_channel(wakeup_chan);
 }

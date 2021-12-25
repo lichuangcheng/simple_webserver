@@ -141,29 +141,30 @@ int main(int argc, char const *argv[])
 
     EventLoop ev_loop;
     auto accept_chan = std::make_shared<ChannelAdaptor>(sock, EPOLLIN, &ev_loop);
-
-    accept_chan->read([&] 
+    std::weak_ptr<ChannelAdaptor> accept_weak(accept_chan);
+    accept_chan->read([accept_weak, root_dir, &ev_loop] 
     {
         struct sockaddr_in client_name;
         socklen_t client_name_len = sizeof(client_name);
-        int connfd = accept(accept_chan->fd(), (struct sockaddr *)&client_name, &client_name_len);
+        int connfd = accept(accept_weak.lock()->fd(), (struct sockaddr *)&client_name, &client_name_len);
         if (connfd == -1) 
             error_exit("accept failed");
 
         printf("accept connection: %s:%d\n", inet_ntoa(client_name.sin_addr), ntohs(client_name.sin_port));
 
         Socket::set_noblock(connfd);
-        auto conn_chan = ChannelAdaptor::create(connfd, EPOLLIN, &ev_loop);
-        conn_chan->read([conn_chan, root_dir, &ev_loop] 
+        auto conn_chan = std::make_shared<ChannelAdaptor>(connfd, EPOLLIN, &ev_loop);
+        std::weak_ptr<ChannelAdaptor> conn_weak(conn_chan);
+        conn_chan->read([conn_weak, root_dir, &ev_loop] 
         {
+            auto conn = conn_weak.lock();
             printf("connect read!\r\n");
-            int n = request_process(conn_chan->fd(), root_dir);
+            int n = request_process(conn->fd(), root_dir);
             if (n == 0)
             {
                 printf("connection close!\n");
-                ev_loop.remove_channel(conn_chan);
-                conn_chan->close_fd();
-                delete conn_chan;
+                ev_loop.remove_channel(conn);
+                conn->close_fd();
             }
             if (n < 0)
             {
@@ -172,16 +173,14 @@ int main(int argc, char const *argv[])
                 else 
                 {
                     perror("recv");
-                    ev_loop.remove_channel(conn_chan);
-                    conn_chan->close_fd();
-                    delete conn_chan;
+                    ev_loop.remove_channel(conn);
+                    conn->close_fd();
                 }
             }
         });
         ev_loop.add_channel(conn_chan);
     });
-    ev_loop.add_channel(accept_chan.get());
-
+    ev_loop.add_channel(accept_chan);
     ev_loop.run();
     close(sock);
     return 0;
