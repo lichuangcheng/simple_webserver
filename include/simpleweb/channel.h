@@ -59,6 +59,8 @@ private:
 
     int fd_ {-1};
     uint32_t events_;
+
+protected:
     EventLoop *loop_{nullptr};
 };
 

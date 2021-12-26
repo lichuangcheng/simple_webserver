@@ -52,22 +52,22 @@ int EventLoop::do_channel_event(ChannelPtr channel, int type)
 int EventLoop::add_channel(ChannelPtr channel) 
 {
     if (is_in_loop_thread())
-        return handle_pending_add(channel);
-    return do_channel_event(channel, 1);
+        return handle_pending_add(std::move(channel));
+    return do_channel_event(std::move(channel), 1);
 }
 
 int EventLoop::remove_channel(ChannelPtr channel) 
 {
     if (is_in_loop_thread())
-        return handle_pending_remove(channel);
-    return do_channel_event(channel, 2);
+        return handle_pending_remove(std::move(channel));
+    return do_channel_event(std::move(channel), 2);
 }
 
 int EventLoop::update_channel(ChannelPtr channel) 
 {
     if (is_in_loop_thread())
-        return handle_pending_update(channel);
-    return do_channel_event(channel, 3);
+        return handle_pending_update(std::move(channel));
+    return do_channel_event(std::move(channel), 3);
 }
 
 // in the i/o thread

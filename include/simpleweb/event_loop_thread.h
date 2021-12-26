@@ -22,6 +22,7 @@ public:
     //由主线程调用，初始化一个子线程，并且让子线程开始运行event_loop
     EventLoop* start();
 
+    friend class EventLoopThreadPool;
 protected:
     void run();
 private:

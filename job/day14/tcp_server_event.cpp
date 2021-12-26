@@ -20,6 +20,7 @@
 #include "simpleweb/socket.h"
 #include "simpleweb/event_loop.h"
 #include <simpleweb/acceptor.h>
+#include <simpleweb/tcp_server.h>
 
 using std::cout;
 using std::endl;
@@ -116,6 +117,38 @@ int request_process(int sock, const std::string &root)
     return n;
 }
 
+//连接建立之后的callback
+int onConnectionCompleted(TCPConnection *conn) {
+    printf("connection completed: fd = %d\n", conn->chan->fd);
+    return 0;
+}
+
+//数据读到buffer之后的callback
+int onMessage(struct buffer *input, TCPConnection *tcpConnection) {
+    printf("get message from tcp connection %s\n", tcpConnection->name.c_str());
+    printf("%s", input->data.c_str());
+
+    buffer output;
+    int size = input->readable();
+    for (int i = 0; i < size; i++) {
+        output.append(rot13_char(input->read_char()));
+    }
+    tcpConnection->send_buffer(&output);
+    return 0;
+}
+
+//数据通过buffer写完之后的callback
+int onWriteCompleted(TCPConnection *tcpConnection) {
+    printf("write completed\n");
+    return 0;
+}
+
+//连接关闭之后的callback
+int onConnectionClosed(TCPConnection *tcpConnection) {
+    printf("connection closed. fd = %d\n", tcpConnection->fd());
+    return 0;
+}
+
 int main(int argc, char const *argv[])
 {
     if (argc != 2)
@@ -133,6 +166,8 @@ int main(int argc, char const *argv[])
     printf("listen on 0.0.0.0:%d\n", port);
     
     EventLoop ev_loop;
+    TCPServer tcp_svr(&ev_loop, port, 0);
+
     auto accept_chan = std::make_shared<ChannelAdaptor>(acceptor.socket_fd(), EPOLLIN, &ev_loop);
     accept_chan->read([root_dir, &ev_loop, &acceptor] 
     {

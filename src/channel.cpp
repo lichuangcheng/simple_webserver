@@ -29,8 +29,10 @@ void Channel::disable_write()
 
 void Channel::close_fd()
 {
-    if (fd_ != -1)
+    if (fd_ != -1) {
         ::close(fd_);
+        fd_ = -1;
+    }
 }
 
 

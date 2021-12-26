@@ -12,3 +12,6 @@ target_link_libraries(http_server_file PRIVATE ${PROJECT_NAME})
 
 add_executable(http_server_file_event "day14/http_server_file_event.cpp")
 target_link_libraries(http_server_file_event PRIVATE ${PROJECT_NAME})
+
+add_executable(tcp_server_event "day14/tcp_server_event.cpp")
+target_link_libraries(tcp_server_event PRIVATE ${PROJECT_NAME})
