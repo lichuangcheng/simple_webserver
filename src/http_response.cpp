@@ -74,4 +74,26 @@ const char* HttpResponse::status_message(int status)
     } 
 }
 
+
+#include <string.h>
+void HttpResponse::encode_buffer(Buffer *output)
+{
+    char buf[512];
+    snprintf(buf, sizeof(buf), "HTTP/1.1 %d ", status);
+    output->append(buf, strlen(buf));
+    output->append(reason);
+    output->append("\r\n");
+
+    for (auto &[key, value] : headers)
+    {
+        output->append(key);
+        output->append(": ");
+        output->append(value);
+        output->append("\r\n");
+    }
+
+    output->append("\r\n");
+    output->append(body);
+}
+
 } // namespace simpleweb

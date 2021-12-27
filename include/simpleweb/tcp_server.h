@@ -14,9 +14,9 @@ namespace simpleweb {
 class TCPServer 
 {
 public:
-    TCPServer(EventLoop *eventLoop, int port, int thread_num = 0);
+    TCPServer(EventLoop *ev_loop, int port, int thread_num = 0);
     
-    TCPServer(EventLoop *eventLoop, int port,
+    TCPServer(EventLoop *ev_loop, int port,
                 connection_completed_call_back connectionCallBack,
                 message_call_back messageCallBack,
                 write_completed_call_back writeCompletedCallBack,
@@ -35,12 +35,17 @@ public:
 
     //设置callback数据
     void set_data(void * data);
-protected:
-    void handle_connection_established();
 
+    friend class HttpServer;
+protected:
+    virtual std::shared_ptr<TCPConnection> create_connection(int conn_fd, EventLoop *loop);
+
+    void handle_connection_established();
+    
 private:
     EventLoop *eventLoop;
     Acceptor acceptor;
+
     connection_completed_call_back connectionCompletedCallBack;
     message_call_back messageCallBack;
     write_completed_call_back writeCompletedCallBack;

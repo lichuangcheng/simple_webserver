@@ -3,6 +3,7 @@
 
 
 #include "simpleweb/http_request.h"
+#include "simpleweb/buffer.h"
 #include <sstream>
 
 
@@ -27,6 +28,7 @@ struct HttpResponse
     void write(std::ostream &ostr) const;
     std::string to_string() const;
 
+    void encode_buffer(Buffer *output);
     static const char *status_message(int status);
 };
 

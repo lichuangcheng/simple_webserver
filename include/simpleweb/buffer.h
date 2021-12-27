@@ -11,7 +11,7 @@ struct Buffer {
     size_t readIndex;       //缓冲读取位置
     size_t writeIndex;      //缓冲写入位置
 
-    Buffer(size_t size = 65536);
+    Buffer(size_t size = 64 * 1024);
     ~Buffer();
 
     size_t writeable() const {

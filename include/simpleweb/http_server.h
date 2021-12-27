@@ -5,28 +5,31 @@
 #include "simpleweb/http_request.h"
 #include "simpleweb/http_response.h"
 #include "simpleweb/thread_pool.h"
+#include "simpleweb/tcp_server.h"
 
 
 namespace simpleweb {
     
 
-class HttpServer
+class HttpServer : public TCPServer
 {
 public:
-    HttpServer();
+    using request_callback = std::function<int (HttpRequest *req, HttpResponse *res)>;
+
+    HttpServer(EventLoop *eventLoop, int port, int thread_num = 0);
+
     ~HttpServer();
 
     void set_root(std::string root);
-    bool listen(int port);
+
+    request_callback request_fn;
 private:
-    int sock_ {-1};
-    thread_pool tp_;
     std::string root_;
 };
 
 
 ///
-/// inline 
+/// inlines
 ///
 inline void HttpServer::set_root(std::string root) 
 {

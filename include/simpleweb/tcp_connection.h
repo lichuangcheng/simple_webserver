@@ -32,6 +32,10 @@ public:
     Buffer input_buffer;   //接收缓冲区
     Buffer output_buffer;  //发送缓冲区
 
+    void * data; //for callback use: http_server
+    void * request; // for callback use
+    void * response; // for callback use
+
     friend class TCPServer;
 protected:
     void read() override;
@@ -40,16 +44,10 @@ protected:
     void close() override;
 
 private:
-
-
     connection_completed_call_back connectionCompletedCallBack;
     connection_closed_call_back connectionClosedCallBack;
     message_call_back messageCallBack;
     write_completed_call_back writeCompletedCallBack; 
-
-    void * data; //for callback use: http_server
-    void * request; // for callback use
-    void * response; // for callback use
 };
 
 } // namespace simpleweb

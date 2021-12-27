@@ -14,6 +14,14 @@ using Headers = std::map<std::string, std::string>;
 using Params = std::map<std::string, std::string>;
 
 
+enum http_request_state {
+    REQUEST_STATUS,    //等待解析状态行
+    REQUEST_HEADERS,   //等待解析headers
+    REQUEST_BODY,      //等待解析请求body
+    REQUEST_DONE       //解析完成
+};
+
+
 class HttpRequest
 {
 public:
@@ -30,12 +38,17 @@ public:
     std::string target;
     Params params;
 
+    enum http_request_state cur_state {REQUEST_STATUS};
+
     bool has_header(const char *key) const;
     void set_header(const char *key, const char *val);
     void set_header(const char *key, const std::string &val);
     bool has_param(const char *key) const;
 
     bool parse(std::string_view str);
+    
+    enum http_request_state current_state() const { return cur_state; }
+    bool close_connection() const;
 
     friend std::ostream& operator << (std::ostream &os, const simpleweb::HttpRequest &req);
 private:

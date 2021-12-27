@@ -53,18 +53,25 @@ void TCPServer::handle_connection_established()
     auto *eventLoop = threadPool->get_loop();
 
     // create a new tcp connection
-    // TODO: 释放内存（...）
-    auto tcpConnection = std::make_shared<TCPConnection>(conn, eventLoop,
+    auto tcp_conn = create_connection(conn, eventLoop);
+
+    // add event read for the new connection
+    eventLoop->add_channel(tcp_conn);
+}
+
+
+std::shared_ptr<TCPConnection> TCPServer::create_connection(int conn_fd, EventLoop *loop)
+{
+    auto conn = std::make_shared<TCPConnection>(conn_fd, loop,
                                                          connectionCompletedCallBack,
                                                          connectionClosedCallBack,
                                                          messageCallBack,
                                                          writeCompletedCallBack);
     //for callback use
     if (data)
-        tcpConnection->data = data;
-
-    // add event read for the new connection
-    eventLoop->add_channel(tcpConnection);
+        conn->data = data;
+    
+    return conn;
 }
 
 

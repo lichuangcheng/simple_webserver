@@ -25,6 +25,25 @@ bool HttpRequest::has_param(const char *key) const
     return params.contains(key);
 }
 
+bool HttpRequest::close_connection() const
+{
+    static const std::string HTTP10 = "HTTP/1.0";
+    static const std::string HTTP11 = "HTTP/1.1";
+    static const std::string KEEP_ALIVE = "Keep-Alive";
+    static const std::string CLOSE = "close";
+
+    auto it = headers.find("Connection");
+    if (it == headers.end()) return true;
+
+    if (CLOSE.compare(it->second) == 0)
+        return true;
+
+    if (version == HTTP10 && KEEP_ALIVE.compare(it->second) != 0)
+        return true;
+
+    return false;
+}
+
 bool HttpRequest::parse_request_header(std::string_view d)
 {
     static const std::set<std::string> methods {
