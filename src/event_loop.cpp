@@ -156,7 +156,7 @@ EventLoop::EventLoop(const std::string &thread_name)
     auto wakeup_chan = std::make_shared<ChannelAdaptor>(socketPair[1], EPOLLIN, this);
     wakeup_chan->read(&EventLoop::handle_wakeup, this);
 
-    printf("wakeup fd == %d\n", wakeup_chan->fd());
+    printf("EventLoop wakeup fd == %d\n", wakeup_chan->fd());
     add_channel(wakeup_chan);
 }
 

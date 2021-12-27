@@ -14,9 +14,11 @@ EventLoopThread::EventLoopThread(std::string thread_name)
 
 EventLoopThread::~EventLoopThread()
 {
-    loop_->stop();
-    if (thread_.joinable())
-        thread_.join();
+    if (loop_) {
+        loop_->stop();
+        if (thread_.joinable())
+            thread_.join();
+    }
 }
 
 //由主线程调用，初始化一个子线程，并且让子线程开始运行event_loop
