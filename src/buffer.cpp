@@ -6,18 +6,18 @@
 
 namespace simpleweb {
 
-buffer::buffer(size_t size) 
+Buffer::Buffer(size_t size) 
 {
     data.resize(size);
     readIndex = 0;
     writeIndex = 0;
 }
 
-buffer::~buffer()
+Buffer::~Buffer()
 {
 }
 
-void buffer::make_room(size_t size)
+void Buffer::make_room(size_t size)
 {
     if (writeable() > size)
         return;
@@ -36,7 +36,7 @@ void buffer::make_room(size_t size)
     }
 }
 
-void buffer::append(void *data, int size) 
+void Buffer::append(void *data, int size) 
 {
     if (data) {
         make_room(size);
@@ -45,13 +45,13 @@ void buffer::append(void *data, int size)
     }
 }
 
-void buffer::append(char c) 
+void Buffer::append(char c) 
 {
     make_room(1);
     data[writeIndex++] = c;
 }
 
-void buffer::append(const std::string &s) 
+void Buffer::append(const std::string &s) 
 {
     if (!s.empty()) {
         make_room(s.size());
@@ -60,7 +60,7 @@ void buffer::append(const std::string &s)
     }
 }
 
-int buffer::socket_read(int fd) 
+int Buffer::socket_read(int fd) 
 {
     char additional_buffer[INIT_BUFFER_SIZE];
     struct iovec vec[2];

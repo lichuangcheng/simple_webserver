@@ -10,7 +10,7 @@ namespace simpleweb {
 class TCPConnection;
 
 using connection_completed_call_back = std::function<int (TCPConnection *)>;
-using message_call_back = std::function<int (buffer *, TCPConnection *)>;
+using message_call_back = std::function<int (Buffer *, TCPConnection *)>;
 using write_completed_call_back = std::function<int (TCPConnection *)>;
 using connection_closed_call_back = std::function<int (TCPConnection *)>;
 
@@ -23,14 +23,14 @@ public:
 
     ~TCPConnection();
     int send_data(void *data, size_t size);
-    int send_buffer(buffer *buffer);
+    int send_buffer(Buffer *buffer);
     void shutdown();
 
     void handle_connection_closed();
 
     std::string name;
-    buffer input_buffer;   //接收缓冲区
-    buffer output_buffer;  //发送缓冲区
+    Buffer input_buffer;   //接收缓冲区
+    Buffer output_buffer;  //发送缓冲区
 
     friend class TCPServer;
 protected:

@@ -6,13 +6,13 @@
 namespace simpleweb {
     
 //数据缓冲区
-struct buffer {
+struct Buffer {
     std::string data;
     size_t readIndex;       //缓冲读取位置
     size_t writeIndex;      //缓冲写入位置
 
-    buffer(size_t size = 65536);
-    ~buffer();
+    Buffer(size_t size = 65536);
+    ~Buffer();
 
     size_t writeable() const {
         return data.size() - writeIndex;

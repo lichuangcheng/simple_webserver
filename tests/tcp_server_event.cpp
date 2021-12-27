@@ -11,12 +11,12 @@ int onConnectionCompleted(TCPConnection *conn)
 }
 
 //数据读到buffer之后的callback
-int onMessage(buffer *input, TCPConnection *conn) 
+int onMessage(Buffer *input, TCPConnection *conn) 
 {
     printf("get message from tcp connection %s\n", conn->name.c_str());
     printf("%s", input->data.c_str());
 
-    buffer output;
+    Buffer output;
     size_t size = input->readable();
     for (size_t i = 0; i < size; i++) {
         output.append(std::toupper(input->read_char()));

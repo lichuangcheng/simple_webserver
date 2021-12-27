@@ -123,7 +123,7 @@ int TCPConnection::send_data(void *data, size_t size)
     return nwrited;
 }
 
-int TCPConnection::send_buffer(buffer *buffer) {
+int TCPConnection::send_buffer(Buffer *buffer) {
     auto size = buffer->readable();
     int result = send_data((void *)(buffer->data.data() + buffer->readIndex), size);
     buffer->readIndex += size;
