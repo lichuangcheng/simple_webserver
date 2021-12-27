@@ -14,7 +14,7 @@ namespace simpleweb {
 class TCPServer 
 {
 public:
-    TCPServer(EventLoop *eventLoop, int port, int thread_num);
+    TCPServer(EventLoop *eventLoop, int port, int thread_num = 0);
     
     TCPServer(EventLoop *eventLoop, int port,
                 connection_completed_call_back connectionCallBack,
