@@ -31,6 +31,7 @@ void Channel::close_fd()
 {
     if (fd_ != -1) {
         ::close(fd_);
+        printf("[info] Channel::close fd == %d\r\n", fd_);
         fd_ = -1;
     }
 }

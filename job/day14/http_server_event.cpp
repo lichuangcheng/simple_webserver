@@ -118,34 +118,38 @@ int request_process(int sock, const std::string &root)
 }
 
 //连接建立之后的callback
-int onConnectionCompleted(TCPConnection *conn) {
-    printf("connection completed: fd = %d\n", conn->chan->fd);
+int onConnectionCompleted(TCPConnection *conn) 
+{
+    printf("connection completed: fd = %d\n", conn->fd());
     return 0;
 }
 
 //数据读到buffer之后的callback
-int onMessage(struct buffer *input, TCPConnection *tcpConnection) {
-    printf("get message from tcp connection %s\n", tcpConnection->name.c_str());
+int onMessage(buffer *input, TCPConnection *conn) 
+{
+    printf("get message from tcp connection %s\n", conn->name.c_str());
     printf("%s", input->data.c_str());
 
     buffer output;
-    int size = input->readable();
-    for (int i = 0; i < size; i++) {
-        output.append(rot13_char(input->read_char()));
+    size_t size = input->readable();
+    for (size_t i = 0; i < size; i++) {
+        output.append(std::toupper(input->read_char()));
     }
-    tcpConnection->send_buffer(&output);
+    conn->send_buffer(&output);
     return 0;
 }
 
 //数据通过buffer写完之后的callback
-int onWriteCompleted(TCPConnection *tcpConnection) {
-    printf("write completed\n");
+int onWriteCompleted(TCPConnection *conn) 
+{
+    printf("write completed: %d\n", conn->fd());
     return 0;
 }
 
 //连接关闭之后的callback
-int onConnectionClosed(TCPConnection *tcpConnection) {
-    printf("connection closed. fd = %d\n", tcpConnection->fd());
+int onConnectionClosed(TCPConnection *conn) 
+{
+    printf("connection closed. fd = %d\n", conn->fd());
     return 0;
 }
 
@@ -161,50 +165,18 @@ int main(int argc, char const *argv[])
     uint16_t port        = conf.get_int32("server.port");
     std::string root_dir = conf.get_string("server.root");
 
-    Acceptor acceptor(port);
     printf("root: %s \n", root_dir.c_str());
     printf("listen on 0.0.0.0:%d\n", port);
     
     EventLoop ev_loop;
-    TCPServer tcp_svr(&ev_loop, port, 0);
+    TCPServer svr(&ev_loop, port, 0);
 
-    auto accept_chan = std::make_shared<ChannelAdaptor>(acceptor.socket_fd(), EPOLLIN, &ev_loop);
-    accept_chan->read([root_dir, &ev_loop, &acceptor] 
-    {
-        std::string ip;
-        uint16_t port;
-        auto connfd = acceptor.accept(ip, port);
-        printf("accept connection: %s:%d\n", ip.c_str(), port);
+    svr.on_connection_completed(onConnectionCompleted)
+       .on_message(onMessage)
+       .on_write_completed(onWriteCompleted)
+       .on_connection_close(onConnectionClosed);
 
-        Socket::set_noblock(connfd);
-        auto conn_chan = std::make_shared<ChannelAdaptor>(connfd, EPOLLIN, &ev_loop);
-        std::weak_ptr<ChannelAdaptor> conn_weak(conn_chan);
-        conn_chan->read([conn_weak, root_dir, &ev_loop] 
-        {
-            auto conn = conn_weak.lock();
-            printf("connect read!\r\n");
-            int n = request_process(conn->fd(), root_dir);
-            if (n == 0)
-            {
-                printf("connection close!\n");
-                ev_loop.remove_channel(conn);
-                conn->close_fd();
-            }
-            if (n < 0)
-            {
-                if (errno == EWOULDBLOCK || errno == EINTR) 
-                    return;
-                else 
-                {
-                    perror("recv");
-                    ev_loop.remove_channel(conn);
-                    conn->close_fd();
-                }
-            }
-        });
-        ev_loop.add_channel(conn_chan);
-    });
-    ev_loop.add_channel(accept_chan);
+    svr.start();
     ev_loop.run();
     return 0;
 }

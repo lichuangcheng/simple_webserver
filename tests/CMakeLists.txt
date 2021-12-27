@@ -6,3 +6,6 @@ target_link_libraries(test_string_utils PRIVATE ${PROJECT_NAME})
 
 add_executable(epoll_http_server "epoll_http_server.cpp")
 target_link_libraries(epoll_http_server PRIVATE ${PROJECT_NAME})
+
+add_executable(tcp_server_event "tcp_server_event.cpp")
+target_link_libraries(tcp_server_event PRIVATE ${PROJECT_NAME})

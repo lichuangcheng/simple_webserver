@@ -25,10 +25,10 @@ public:
     
     ~TCPServer() = default;
 
-    TCPServer& on_connection_completed(connection_completed_call_back fd);
-    TCPServer& on_message(message_call_back fd);
-    TCPServer& on_write_completed(write_completed_call_back fd);
-    TCPServer& on_connection_close(connection_closed_call_back fd);
+    TCPServer& on_connection_completed(connection_completed_call_back fn);
+    TCPServer& on_message(message_call_back fn);
+    TCPServer& on_write_completed(write_completed_call_back fn);
+    TCPServer& on_connection_close(connection_closed_call_back fn);
 
     //开启监听
     void start();
@@ -49,6 +49,37 @@ private:
 
     void * data {nullptr}; //for callback use: http_server
 };
+
+
+/// 
+/// inlines
+///
+inline TCPServer& TCPServer::on_connection_completed(connection_completed_call_back fn) 
+{
+    connectionCompletedCallBack = fn;
+    return *this;
+}
+
+
+inline TCPServer& TCPServer::on_message(message_call_back fn) 
+{
+    messageCallBack = fn;
+    return *this;
+}
+
+
+inline TCPServer& TCPServer::on_write_completed(write_completed_call_back fn) 
+{
+    writeCompletedCallBack = fn;
+    return *this;
+}
+
+
+inline TCPServer& TCPServer::on_connection_close(connection_closed_call_back fn) 
+{
+    connectionClosedCallBack = fn;
+    return *this;
+}
 
 
 } // namespace simpleweb

@@ -28,6 +28,10 @@ public:
 
     void handle_connection_closed();
 
+    std::string name;
+    buffer input_buffer;   //接收缓冲区
+    buffer output_buffer;  //发送缓冲区
+
     friend class TCPServer;
 protected:
     void read() override;
@@ -36,9 +40,7 @@ protected:
     void close() override;
 
 private:
-    std::string name;
-    buffer input_buffer;   //接收缓冲区
-    buffer output_buffer;  //发送缓冲区
+
 
     connection_completed_call_back connectionCompletedCallBack;
     connection_closed_call_back connectionClosedCallBack;
