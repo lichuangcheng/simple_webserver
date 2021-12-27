@@ -1,7 +1,6 @@
 #include <sys/epoll.h>
 #include <unistd.h>
 #include "simpleweb/event_dispatcher.h"
-#include "simpleweb/event_loop.h"
 
 
 namespace simpleweb {
@@ -90,7 +89,7 @@ EventDispatcher::EventDispatcher()
 
 EventDispatcher::~EventDispatcher() 
 {
-    close(efd);
+    ::close(efd);
 }
 
 

@@ -27,18 +27,15 @@ public:
     // 增加通道事件
     int add_channel(ChannelPtr channel);
 
+    // 删除通道
     int remove_channel(ChannelPtr channel);
 
+    // 更新通道信息
     int update_channel(ChannelPtr channel);
 
     bool has_channel(ChannelPtr channel);
 
-    // dispather派发完事件之后，调用该方法通知EventLoop执行对应事件的相关callback方法
-    // res: EVENT_READ | EVENT_READ等
-    int channel_event_activate(int revents);
-
     void assert_in_loop_thread();
-
     int is_in_loop_thread();
 
     ~EventLoop();

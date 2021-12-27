@@ -1,17 +1,14 @@
 #ifndef SIMPLEWEB_EVENT_DISPATCHER_H
 #define SIMPLEWEB_EVENT_DISPATCHER_H
 
+
 #include "simpleweb/channel.h"
 #include "sys/epoll.h"
-#include <string>
 #include <vector>
 
 
 namespace simpleweb {
     
-
-class EventLoop;
-
 
 /** 抽象的event_dispatcher结构体，对应的实现如select,poll,epoll等I/O复用. */
 class EventDispatcher 
