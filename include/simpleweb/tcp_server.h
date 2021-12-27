@@ -6,6 +6,7 @@
 #include "simpleweb/event_loop_thread_pool.h"
 #include "simpleweb/buffer.h"
 #include "simpleweb/tcp_connection.h"
+#include "simpleweb/tcp_connection_factory.h"
 
 
 namespace simpleweb {
@@ -15,20 +16,10 @@ class TCPServer
 {
 public:
     TCPServer(EventLoop *ev_loop, int port, int thread_num = 0);
-    
-    TCPServer(EventLoop *ev_loop, int port,
-                connection_completed_call_back connectionCallBack,
-                message_call_back messageCallBack,
-                write_completed_call_back writeCompletedCallBack,
-                connection_closed_call_back connectionClosedCallBack,
-                int threadNum);
+
+    TCPServer(TCPConnectionFactory::Ptr factory, EventLoop *ev_loop, int port, int thread_num = 0);
     
     ~TCPServer() = default;
-
-    TCPServer& on_connection_completed(connection_completed_call_back fn);
-    TCPServer& on_message(message_call_back fn);
-    TCPServer& on_write_completed(write_completed_call_back fn);
-    TCPServer& on_connection_close(connection_closed_call_back fn);
 
     //开启监听
     void start();
@@ -36,56 +27,28 @@ public:
     //设置callback数据
     void set_data(void * data);
 
+    // 设置工厂方法
+    void set_connection_factory(TCPConnectionFactory::Ptr factory);
+
     friend class HttpServer;
 protected:
-    virtual std::shared_ptr<TCPConnection> create_connection(int conn_fd, EventLoop *loop);
-
     void handle_connection_established();
     
 private:
     EventLoop *eventLoop;
     Acceptor acceptor;
 
-    connection_completed_call_back connectionCompletedCallBack;
-    message_call_back messageCallBack;
-    write_completed_call_back writeCompletedCallBack;
-    connection_closed_call_back connectionClosedCallBack;
+    TCPConnectionFactory::Ptr factory_;
     std::unique_ptr<EventLoopThreadPool> threadPool;
 
     void * data {nullptr}; //for callback use: http_server
 };
 
 
-/// 
-/// inlines
-///
-inline TCPServer& TCPServer::on_connection_completed(connection_completed_call_back fn) 
+inline void TCPServer::set_connection_factory(TCPConnectionFactory::Ptr factory)
 {
-    connectionCompletedCallBack = fn;
-    return *this;
+    factory_ = std::move(factory);
 }
-
-
-inline TCPServer& TCPServer::on_message(message_call_back fn) 
-{
-    messageCallBack = fn;
-    return *this;
-}
-
-
-inline TCPServer& TCPServer::on_write_completed(write_completed_call_back fn) 
-{
-    writeCompletedCallBack = fn;
-    return *this;
-}
-
-
-inline TCPServer& TCPServer::on_connection_close(connection_closed_call_back fn) 
-{
-    connectionClosedCallBack = fn;
-    return *this;
-}
-
 
 } // namespace simpleweb
 

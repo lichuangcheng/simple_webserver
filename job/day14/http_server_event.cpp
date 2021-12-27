@@ -14,6 +14,7 @@
 #include "simpleweb/event_loop.h"
 #include <simpleweb/acceptor.h>
 #include <simpleweb/tcp_server.h>
+#include <simpleweb/tcp_connection_factory.h>
 
 using std::cout;
 using std::endl;
@@ -95,52 +96,79 @@ void request_file(const std::string &root, const HttpRequest &req, HttpResponse 
     return;
 }
 
-//连接建立之后的callback
-int onConnectionCompleted(TCPConnection *conn) 
+class ClientConnection : public TCPConnection
 {
-    printf("connection completed: fd = %d\n", conn->fd());
-    return 0;
-}
-
-//数据读到buffer之后的callback
-int onMessage(Buffer *input, TCPConnection *conn, const std::string &root) 
-{
-    printf("get message from tcp connection %s\n", conn->name.c_str());
-    printf("%s", input->data.c_str());
-
-    HttpRequest req;
-    HttpResponse res;
-    res.version = "HTTP/1.0";
-    if (req.parse(std::string_view(input->read_begin(), input->readable()))) 
+public:
+    ClientConnection(std::string root, int fd, EventLoop *eventLoop) : TCPConnection(fd, eventLoop), root_(std::move(root))
     {
-        if (iequals(req.method, "GET"))
-            request_file(root, req, res);
-        else
-            unimplemented(res);
     }
-    else bad_request(res);
+
+    ~ClientConnection()
+    {
+    }
+protected:
+    void on_connection_completed() override
+    {
+        printf("connection completed: fd = %d\n", fd());
+    }
+
+    void on_connection_closed() override
+    {
+        printf("connection closed. fd = %d\n", fd());
+    }
+
+    void on_message(Buffer *input) override
+    {
+        printf("get message from tcp connection %s\n", name.c_str());
+        printf("%s", input->data.c_str());
+
+        HttpRequest req;
+        HttpResponse res;
+        res.version = "HTTP/1.0";
+        if (req.parse(std::string_view(input->read_begin(), input->readable()))) 
+        {
+            if (iequals(req.method, "GET"))
+                request_file(root_, req, res);
+            else
+                unimplemented(res);
+        }
+        else bad_request(res);
+            
+        res.reason = HttpResponse::status_message(res.status);
+        res.headers["Server"] = "simpleweb/0.1.0";
+        auto s = res.to_string();
         
-    res.reason = HttpResponse::status_message(res.status);
-    res.headers["Server"] = "simpleweb/0.1.0";
-    auto s = res.to_string();
-    
-    conn->send_data(s.data(), s.size());
-    return 0;
-}
+        send_data(s.data(), s.size());
+    }
 
-//数据通过buffer写完之后的callback
-int onWriteCompleted(TCPConnection *conn) 
-{
-    printf("write completed: %d\n", conn->fd());
-    return 0;
-}
+    void on_write_completed() override
+    {
+        printf("write completed: %d\n", fd());
+    }
 
-//连接关闭之后的callback
-int onConnectionClosed(TCPConnection *conn) 
+private:
+    std::string root_;
+};
+
+
+class ClientTCPConnectionFactory : public TCPConnectionFactory
 {
-    printf("connection closed. fd = %d\n", conn->fd());
-    return 0;
-}
+public:
+    ClientTCPConnectionFactory(std::string root) : root_(root)
+    {
+    }
+
+    ~ClientTCPConnectionFactory()
+    {
+    }
+
+    std::shared_ptr<TCPConnection> create_connection(int conn_fd, EventLoop *loop) override
+    {
+        return std::make_shared<ClientConnection>(root_, conn_fd, loop);
+    }
+private:
+    std::string root_;
+};
 
 int main(int argc, char const *argv[])
 {
@@ -158,12 +186,7 @@ int main(int argc, char const *argv[])
     printf("listen on 0.0.0.0:%d\n", port);
     
     EventLoop ev_loop;
-    TCPServer svr(&ev_loop, port, 0);
-
-    svr.on_connection_completed(onConnectionCompleted)
-       .on_message(std::bind(&onMessage, _1, _2, root_dir))
-       .on_write_completed(onWriteCompleted)
-       .on_connection_close(onConnectionClosed);
+    TCPServer svr(std::make_shared<ClientTCPConnectionFactory>(root_dir), &ev_loop, port, 0);
 
     svr.start();
     ev_loop.run();

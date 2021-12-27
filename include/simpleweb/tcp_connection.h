@@ -7,19 +7,11 @@
 
 namespace simpleweb {
 
-class TCPConnection;
-
-using connection_completed_call_back = std::function<int (TCPConnection *)>;
-using message_call_back = std::function<int (Buffer *, TCPConnection *)>;
-using write_completed_call_back = std::function<int (TCPConnection *)>;
-using connection_closed_call_back = std::function<int (TCPConnection *)>;
 
 class TCPConnection : public Channel
 {
 public:
-    TCPConnection(int fd, EventLoop *eventLoop, connection_completed_call_back connectionCompletedCallBack,
-                   connection_closed_call_back connectionClosedCallBack,
-                   message_call_back messageCallBack, write_completed_call_back writeCompletedCallBack);
+    TCPConnection(int fd, EventLoop *eventLoop);
 
     ~TCPConnection();
     int send_data(void *data, size_t size);
@@ -43,11 +35,10 @@ protected:
     void error() override;
     void close() override;
 
-private:
-    connection_completed_call_back connectionCompletedCallBack;
-    connection_closed_call_back connectionClosedCallBack;
-    message_call_back messageCallBack;
-    write_completed_call_back writeCompletedCallBack; 
+    virtual void on_connection_completed() {}
+    virtual void on_connection_closed() {}
+    virtual void on_message(Buffer *) {}
+    virtual void on_write_completed() {}
 };
 
 } // namespace simpleweb

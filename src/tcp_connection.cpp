@@ -19,8 +19,7 @@ void TCPConnection::read()
 {
     if (input_buffer.socket_read(fd()) > 0) {
         //应用程序真正读取Buffer里的数据
-        if (messageCallBack)
-            messageCallBack(&input_buffer, this);
+        on_message(&input_buffer);
     } else {
         handle_connection_closed();
     }
@@ -38,8 +37,7 @@ void TCPConnection::write()
             disable_write();
         }
         //回调writeCompletedCallBack
-        if (writeCompletedCallBack) 
-            writeCompletedCallBack(this);
+        on_write_completed();
     } else {
         yolanda_msgx("handle_write for tcp connection %s", name.c_str());
     }
@@ -59,29 +57,19 @@ void TCPConnection::close()
 
 void TCPConnection::handle_connection_closed() 
 {
-    if (connectionClosedCallBack)
-        connectionClosedCallBack(this);
-
+    on_connection_closed();
     loop_->remove_channel(shared_from_this());
 }
 
 
-TCPConnection::TCPConnection(int connected_fd, EventLoop *eventLoop,
-                             connection_completed_call_back connectionCompletedCallBack,
-                             connection_closed_call_back connectionClosedCallBack,
-                             message_call_back messageCallBack, write_completed_call_back writeCompletedCallBack) 
+TCPConnection::TCPConnection(int connected_fd, EventLoop *eventLoop) 
     : Channel(connected_fd, EPOLLIN, eventLoop)
-    , connectionCompletedCallBack(connectionCompletedCallBack)
-    , connectionClosedCallBack(connectionClosedCallBack)
-    , messageCallBack(messageCallBack)
-    , writeCompletedCallBack(writeCompletedCallBack)
 {
     char buf[64];
     sprintf(buf, "connection-%d", connected_fd);
     name = buf;
 
-    if (connectionCompletedCallBack)
-        connectionCompletedCallBack(this);
+    on_connection_completed();
 }
 
 TCPConnection::~TCPConnection()

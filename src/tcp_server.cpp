@@ -18,23 +18,15 @@ namespace simpleweb {
 
 
 TCPServer::TCPServer(EventLoop *eventLoop, int port, int thread_num) 
-    : TCPServer(eventLoop, port, {}, {}, {}, {}, thread_num)
+    : TCPServer(nullptr, eventLoop, port, thread_num)
 {
 }
 
 
-TCPServer::TCPServer(EventLoop *eventLoop, int port,
-                connection_completed_call_back connectionCompletedCallBack,
-                message_call_back messageCallBack,
-                write_completed_call_back writeCompletedCallBack,
-                connection_closed_call_back connectionClosedCallBack,
-                int threadNum)
+TCPServer::TCPServer(TCPConnectionFactory::Ptr factory, EventLoop *eventLoop, int port, int threadNum)
     : eventLoop(eventLoop)
     , acceptor(port)
-    , connectionCompletedCallBack(connectionCompletedCallBack)
-    , messageCallBack(messageCallBack)
-    , writeCompletedCallBack(writeCompletedCallBack)
-    , connectionClosedCallBack(connectionClosedCallBack)
+    , factory_(std::move(factory))
     , threadPool(new EventLoopThreadPool(eventLoop, threadNum))
 {
 }
@@ -53,25 +45,13 @@ void TCPServer::handle_connection_established()
     auto *eventLoop = threadPool->get_loop();
 
     // create a new tcp connection
-    auto tcp_conn = create_connection(conn, eventLoop);
+    auto tcp_conn = factory_->create_connection(conn, eventLoop);
+    //for callback use
+    if (data)
+        tcp_conn->data = data;
 
     // add event read for the new connection
     eventLoop->add_channel(tcp_conn);
-}
-
-
-std::shared_ptr<TCPConnection> TCPServer::create_connection(int conn_fd, EventLoop *loop)
-{
-    auto conn = std::make_shared<TCPConnection>(conn_fd, loop,
-                                                         connectionCompletedCallBack,
-                                                         connectionClosedCallBack,
-                                                         messageCallBack,
-                                                         writeCompletedCallBack);
-    //for callback use
-    if (data)
-        conn->data = data;
-    
-    return conn;
 }
 
 

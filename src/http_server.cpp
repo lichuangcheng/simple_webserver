@@ -1,4 +1,5 @@
 #include "simpleweb/http_server.h"
+#include "simpleweb/tcp_connection_factory.h"
 #include "simpleweb/socket.h"
 #include "simpleweb/error.h"
 #include "simpleweb/log.h"
@@ -34,6 +35,7 @@ int process_status_line(char *start, char *end, HttpRequest *httpRequest)
     space = (char *)memmem(start, end - start, " ", 1);
     assert(space != NULL);
     httpRequest->target.insert(0, start, space - start);
+    httpRequest->path = httpRequest->target.substr(0, httpRequest->target.find('?'));
 
     //version
     start = space + 1;
@@ -86,73 +88,120 @@ int parse_http_request(Buffer *input, HttpRequest *httpRequest)
     return ok;
 }
 
-//连接建立之后的callback
-int http_onConnectionCompleted(TCPConnection *tcpConnection) 
+namespace  {
+
+class HttpConnection : public TCPConnection
 {
-    yolanda_msgx("http connection completed, fd = %d", tcpConnection->fd());
-    // tcpConnection->request = new http_request();
-    return 0;
-}
+public:
+    public:
+    HttpConnection(int fd, EventLoop *eventLoop, request_callback fn) 
+        : TCPConnection(fd, eventLoop)
+        , request_fn_(fn)
+    {
+    }
 
-// buffer是框架构建好的，并且已经收到部分数据的情况下
-// 注意这里可能没有收到全部数据，所以要处理数据不够的情形
-int http_onMessage(Buffer *input, TCPConnection *tcpConnection) 
+    ~HttpConnection()
+    {
+    }
+
+protected:
+    void on_connection_completed() override
+    {
+        yolanda_msgx("http connection completed, fd = %d", fd());
+    }
+
+    void on_connection_closed() override
+    {
+        yolanda_msgx("http connection closed: fd = %d", fd());
+    }
+
+    void on_message(Buffer *input) override
+    {
+        if (parse_http_request(input, &request) == 0) {
+            std::string error_response = "HTTP/1.1 400 Bad Request\r\n\r\n";
+            send_data(error_response.data(), error_response.size());
+            shutdown();
+        }
+
+        //处理完了所有的request数据，接下来进行编码和发送
+        if (request.current_state() == REQUEST_DONE) {
+
+            //httpServer暴露的requestCallback回调
+            if (request_fn_)
+                request_fn_(request, response);
+
+            Buffer buffer;
+            response.encode_buffer(&buffer);
+            send_buffer(&buffer);
+
+            if (request.close_connection()) {
+                shutdown();
+            }
+
+            // TODO: reset request;
+            // request.reset();
+            request = {};
+            response = {};
+        }
+    }
+
+    void on_write_completed() override
+    {
+        yolanda_msgx("write completed: %s", name.c_str());
+    }
+
+private:
+    HttpRequest request;
+    HttpResponse response;
+
+    request_callback request_fn_;
+};
+
+
+class HTTPConnectionFactoryImpl : public TCPConnectionFactory
 {
-    yolanda_msgx("get message from tcp connection %s", tcpConnection->name.c_str());
-
-    HttpRequest *httpRequest = (HttpRequest *) tcpConnection->request;
-    HttpServer *httpServer = (HttpServer *) tcpConnection->data;
-
-    if (parse_http_request(input, httpRequest) == 0) {
-        std::string error_response = "HTTP/1.1 400 Bad Request\r\n\r\n";
-        tcpConnection->send_data(error_response.data(), error_response.size());
-        tcpConnection->shutdown();
+public:
+    HTTPConnectionFactoryImpl(request_callback fn) : request_callback_fn_(fn)
+    {
     }
 
-    //处理完了所有的request数据，接下来进行编码和发送
-    if (httpRequest->current_state() == REQUEST_DONE) {
-        auto httpResponse = std::make_shared<HttpResponse>();
-
-        //httpServer暴露的requestCallback回调
-        if (httpServer->request_fn) {
-            httpServer->request_fn(httpRequest, httpResponse.get());
-        }
-        Buffer buffer;
-        httpResponse->encode_buffer(&buffer);
-        tcpConnection->send_buffer(&buffer);
-
-        if (httpRequest->close_connection()) {
-            tcpConnection->shutdown();
-        }
+    ~HTTPConnectionFactoryImpl()
+    {
     }
-    return 0;
-}
 
-//数据通过buffer写完之后的callback
-int http_onWriteCompleted(TCPConnection *tcpConnection) {
-    yolanda_msgx("write completed: %s", tcpConnection->name.c_str());
-    return 0;
-}
-
-//连接关闭之后的callback
-int http_onConnectionClosed(TCPConnection *tcpConnection) {
-    yolanda_msgx("http connection closed: fd = %d", tcpConnection->fd());
-    if (tcpConnection->request) {
-        delete (HttpRequest *)tcpConnection->request;
-        tcpConnection->request = nullptr;
+    std::shared_ptr<TCPConnection> create_connection(int conn_fd, EventLoop *loop) override
+    {
+        return std::make_shared<HttpConnection>(conn_fd, loop, request_callback_fn_);
     }
-    return 0;
-}
+
+private:
+    request_callback request_callback_fn_;
+};
+
+
+} // namespace 
+
 
 HttpServer::HttpServer(EventLoop *ev_loop, int port, int thread_num) 
-    : TCPServer(ev_loop, port, http_onConnectionCompleted, http_onMessage
-                , http_onWriteCompleted, http_onConnectionClosed, thread_num)
+    : tcp_svr_(ev_loop, port, thread_num)
 {
 }
 
+
+HttpServer& HttpServer::request(request_callback request_process)
+{
+    request_fn_ = request_process;
+    tcp_svr_.set_connection_factory(std::make_shared<HTTPConnectionFactoryImpl>(std::move(request_process)));
+    return *this;
+}
 
 HttpServer::~HttpServer()
 {
+}
+
+void HttpServer::start()
+{
+    tcp_svr_.start();
 }
 
 
