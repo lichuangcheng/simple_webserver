@@ -1,12 +1,5 @@
-#include <unistd.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-#include <sys/epoll.h>
-#include <string>
 #include <vector>
 #include <fstream>
-#include <array>
-#include <string_view>
 #include <iostream>
 #include <filesystem>
 #include <unordered_map>
@@ -27,6 +20,7 @@ using std::endl;
 
 namespace fs = std::filesystem;
 using namespace simpleweb;
+using namespace std::placeholders;
 
 std::optional<std::string> file_media_type(const std::string &ext)
 {
@@ -78,6 +72,12 @@ void unimplemented(HttpResponse &res)
     res.set_content("Method Not Implemented", "text/html;charset=utf-8");
 }
 
+void bad_request(HttpResponse &res)
+{
+    res.status = 400;
+    res.set_content("400 Bad request", "text/html;charset=utf-8");
+}
+
 void request_file(const std::string &root, const HttpRequest &req, HttpResponse &res)
 {
     printf("request file: %s \n", req.path.c_str());
@@ -95,28 +95,6 @@ void request_file(const std::string &root, const HttpRequest &req, HttpResponse 
     return;
 }
 
-int request_process(int sock, const std::string &root)
-{
-    std::array<char, 4096> buf;
-    int n = 0;
-    if((n = recv(sock, buf.data(), buf.size() - 1, 0)) > 0)
-    {
-        HttpRequest req;
-        HttpResponse res;
-        res.version = "HTTP/1.0";
-        req.parse(std::string_view(buf.data(), n));
-        if (iequals(req.method, "GET"))
-            request_file(root, req, res);
-        else 
-            unimplemented(res);
-        res.reason = HttpResponse::status_message(res.status);
-        res.headers["Server"] = "simpleweb/0.1.0";
-        auto s = res.to_string();
-        send(sock, s.data(), s.size(), 0);
-    }
-    return n;
-}
-
 //连接建立之后的callback
 int onConnectionCompleted(TCPConnection *conn) 
 {
@@ -125,17 +103,28 @@ int onConnectionCompleted(TCPConnection *conn)
 }
 
 //数据读到buffer之后的callback
-int onMessage(Buffer *input, TCPConnection *conn) 
+int onMessage(Buffer *input, TCPConnection *conn, const std::string &root) 
 {
     printf("get message from tcp connection %s\n", conn->name.c_str());
     printf("%s", input->data.c_str());
 
-    Buffer output;
-    size_t size = input->readable();
-    for (size_t i = 0; i < size; i++) {
-        output.append(std::toupper(input->read_char()));
+    HttpRequest req;
+    HttpResponse res;
+    res.version = "HTTP/1.0";
+    if (req.parse(std::string_view(input->read_begin(), input->readable()))) 
+    {
+        if (iequals(req.method, "GET"))
+            request_file(root, req, res);
+        else
+            unimplemented(res);
     }
-    conn->send_buffer(&output);
+    else bad_request(res);
+        
+    res.reason = HttpResponse::status_message(res.status);
+    res.headers["Server"] = "simpleweb/0.1.0";
+    auto s = res.to_string();
+    
+    conn->send_data(s.data(), s.size());
     return 0;
 }
 
@@ -172,7 +161,7 @@ int main(int argc, char const *argv[])
     TCPServer svr(&ev_loop, port, 0);
 
     svr.on_connection_completed(onConnectionCompleted)
-       .on_message(onMessage)
+       .on_message(std::bind(&onMessage, _1, _2, root_dir))
        .on_write_completed(onWriteCompleted)
        .on_connection_close(onConnectionClosed);
 
