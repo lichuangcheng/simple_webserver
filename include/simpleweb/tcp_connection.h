@@ -24,11 +24,6 @@ public:
     Buffer input_buffer;   //接收缓冲区
     Buffer output_buffer;  //发送缓冲区
 
-    void * data; //for callback use: http_server
-    void * request; // for callback use
-    void * response; // for callback use
-
-    friend class TCPServer;
 protected:
     void read() override;
     void write() override;

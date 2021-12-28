@@ -46,9 +46,6 @@ void TCPServer::handle_connection_established()
 
     // create a new tcp connection
     auto tcp_conn = factory_->create_connection(conn, eventLoop);
-    //for callback use
-    if (data)
-        tcp_conn->data = data;
 
     // add event read for the new connection
     eventLoop->add_channel(tcp_conn);
@@ -68,14 +65,6 @@ void TCPServer::start()
     eventLoop->add_channel(channel);
 }
 
-
-//设置callback数据
-void TCPServer::set_data(void *data) 
-{
-    if (data != nullptr) {
-        this->data = data;
-    }
-}
 
 } // namespace simpelweb
 

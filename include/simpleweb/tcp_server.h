@@ -24,9 +24,6 @@ public:
     //开启监听
     void start();
 
-    //设置callback数据
-    void set_data(void * data);
-
     // 设置工厂方法
     void set_connection_factory(TCPConnectionFactory::Ptr factory);
 
@@ -40,8 +37,6 @@ private:
 
     TCPConnectionFactory::Ptr factory_;
     std::unique_ptr<EventLoopThreadPool> threadPool;
-
-    void * data {nullptr}; //for callback use: http_server
 };
 
 
