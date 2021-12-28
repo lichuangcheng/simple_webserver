@@ -1,6 +1,36 @@
 #include "simpleweb/http_response.h"
+#include <sstream>
 
 namespace simpleweb {
+
+
+void HttpResponse::write(std::ostream &ostr) const
+{
+    ostr << version << " " << status << " " << reason << "\r\n";
+    for (auto & [name, value] : headers)
+    {
+        ostr << name << ": " << value << "\r\n";
+    }
+	ostr << "\r\n";
+    ostr << body;
+}
+
+
+std::string HttpResponse::to_string() const
+{
+    std::ostringstream oss;
+    write(oss);
+    return oss.str();
+}
+
+
+void HttpResponse::set_content(const std::string &s, const std::string &content_type) 
+{
+    body = s;
+    headers["Content-Type"] = content_type;
+    headers["Content-Length"] = std::to_string(body.size());
+}
+
 
 const char* HttpResponse::status_message(int status) 
 {
@@ -76,13 +106,11 @@ const char* HttpResponse::status_message(int status)
 
 
 #include <string.h>
-void HttpResponse::encode_buffer(Buffer *output)
+void HttpResponse::write(Buffer *output)
 {
     char buf[512];
-    snprintf(buf, sizeof(buf), "HTTP/1.1 %d ", status);
+    snprintf(buf, sizeof(buf), "HTTP/1.1 %d %s\r\n", status, reason.c_str());
     output->append(buf, strlen(buf));
-    output->append(reason);
-    output->append("\r\n");
 
     for (auto &[key, value] : headers)
     {
@@ -95,5 +123,6 @@ void HttpResponse::encode_buffer(Buffer *output)
     output->append("\r\n");
     output->append(body);
 }
+
 
 } // namespace simpleweb

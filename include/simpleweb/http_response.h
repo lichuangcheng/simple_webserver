@@ -4,7 +4,7 @@
 
 #include "simpleweb/http_request.h"
 #include "simpleweb/buffer.h"
-#include <sstream>
+#include <ostream>
 
 
 namespace simpleweb {
@@ -28,40 +28,9 @@ struct HttpResponse
     void write(std::ostream &ostr) const;
     std::string to_string() const;
 
-    void encode_buffer(Buffer *output);
+    void write(Buffer *output);
     static const char *status_message(int status);
 };
-
-
-//
-// inlines
-//
-inline void HttpResponse::write(std::ostream &ostr) const
-{
-    ostr << version << " " << status << " " << reason << "\r\n";
-    for (auto & [name, value] : headers)
-    {
-        ostr << name << ": " << value << "\r\n";
-    }
-	ostr << "\r\n";
-    ostr << body;
-}
-
-
-inline std::string HttpResponse::to_string() const
-{
-    std::ostringstream oss;
-    write(oss);
-    return oss.str();
-}
-
-
-inline void HttpResponse::set_content(const std::string &s, const std::string &content_type) 
-{
-    body = s;
-    headers["Content-Type"] = content_type;
-    headers["Content-Length"] = std::to_string(body.size());
-}
 
 
 } // namespace simpleweb

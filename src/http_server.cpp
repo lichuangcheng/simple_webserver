@@ -131,15 +131,13 @@ protected:
                 request_fn_(request, response);
 
             Buffer buffer;
-            response.encode_buffer(&buffer);
+            response.write(&buffer);
             send_buffer(&buffer);
 
             if (request.close_connection()) {
                 shutdown();
             }
 
-            // TODO: reset request;
-            // request.reset();
             request = {};
             response = {};
         }
