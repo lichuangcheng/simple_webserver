@@ -17,9 +17,9 @@ namespace simpleweb {
 
 void TCPConnection::read()
 {
-    if (input_buffer.socket_read(fd()) > 0) {
+    if (input_buffer_.socket_read(fd()) > 0) {
         //应用程序真正读取Buffer里的数据
-        on_message(&input_buffer);
+        on_message(&input_buffer_);
     } else {
         handle_connection_closed();
     }
@@ -28,12 +28,12 @@ void TCPConnection::read()
 void TCPConnection::write()
 {
     loop_->assert_in_loop_thread();
-    ssize_t nwrited = ::write(fd(), output_buffer.read_begin(), output_buffer.readable());
+    ssize_t nwrited = ::write(fd(), output().read_begin(), output().readable());
     if (nwrited > 0) {
         //已读nwrited字节
-        output_buffer.readIndex += nwrited;
+        output().readIndex += nwrited;
         //如果数据完全发送出去，就不需要继续了
-        if (output_buffer.readable() == 0) {
+        if (output().readable() == 0) {
             disable_write();
         }
         //回调writeCompletedCallBack
@@ -62,8 +62,8 @@ void TCPConnection::handle_connection_closed()
 }
 
 
-TCPConnection::TCPConnection(int connected_fd, EventLoop *eventLoop) 
-    : Channel(connected_fd, EPOLLIN, eventLoop)
+TCPConnection::TCPConnection(int connected_fd, EventLoop *ev_loop) 
+    : Channel(connected_fd, EPOLLIN, ev_loop)
 {
     char buf[64];
     sprintf(buf, "connection-%d", connected_fd);
@@ -86,7 +86,7 @@ int TCPConnection::send_data(void *data, size_t size)
     int fault = 0;
 
     //先往套接字尝试发送数据
-    if (!is_enabled_write() && output_buffer.readable() == 0) {
+    if (!is_enabled_write() && output_buffer_.readable() == 0) {
         nwrited = ::write(fd(), data, size);
         if (nwrited >= 0) {
             nleft = nleft - nwrited;
@@ -102,7 +102,7 @@ int TCPConnection::send_data(void *data, size_t size)
 
     if (!fault && nleft > 0) {
         //拷贝到Buffer中，Buffer的数据由框架接管
-        output_buffer.append(reinterpret_cast<uint8_t *>(data) + nwrited, nleft);
+        output_buffer_.append(reinterpret_cast<uint8_t *>(data) + nwrited, nleft);
         if (!is_enabled_write()) {
             enable_write();
         }

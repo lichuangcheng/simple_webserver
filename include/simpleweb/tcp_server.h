@@ -28,15 +28,18 @@ public:
     void set_connection_factory(TCPConnectionFactory::Ptr factory);
 
     friend class HttpServer;
+
+    TCPServer(const TCPServer&) = delete;
+    TCPServer& operator = (const TCPServer&) = delete;
 protected:
     void handle_connection_established();
     
 private:
-    EventLoop *eventLoop;
-    Acceptor acceptor;
+    EventLoop *ev_loop_;
+    Acceptor acceptor_;
 
     TCPConnectionFactory::Ptr factory_;
-    std::unique_ptr<EventLoopThreadPool> threadPool;
+    std::unique_ptr<EventLoopThreadPool> evtp_;
 };
 
 

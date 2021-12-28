@@ -12,7 +12,7 @@ int EventDispatcher::add(Channel *channel)
     struct epoll_event event;
     event.data.ptr = channel;
     event.events = channel->events();
-    if (epoll_ctl(efd, EPOLL_CTL_ADD, fd, &event) == -1) {
+    if (epoll_ctl(epfd_, EPOLL_CTL_ADD, fd, &event) == -1) {
         perror("epoll_ctl add  fd failed");
         return -1;
     }
@@ -21,7 +21,7 @@ int EventDispatcher::add(Channel *channel)
 
 int EventDispatcher::del(Channel *channel) 
 {
-    if (epoll_ctl(efd, EPOLL_CTL_DEL, channel->fd(), nullptr) == -1) {
+    if (epoll_ctl(epfd_, EPOLL_CTL_DEL, channel->fd(), nullptr) == -1) {
         perror("epoll_ctl delete fd failed");
         return -1;
     }
@@ -34,7 +34,7 @@ int EventDispatcher::update(Channel *channel)
     struct epoll_event event;
     event.data.ptr = channel;
     event.events = channel->events();
-    if (epoll_ctl(efd, EPOLL_CTL_MOD, channel->fd(), &event) == -1) {
+    if (epoll_ctl(epfd_, EPOLL_CTL_MOD, channel->fd(), &event) == -1) {
         perror("epoll_ctl modify fd failed");
         return -1;
     }
@@ -45,7 +45,7 @@ int EventDispatcher::update(Channel *channel)
 int EventDispatcher::dispatch(struct timeval *timeval) 
 {
     (void)(timeval);
-    int n = epoll_wait(efd, events.data(), events.size(), -1);
+    int n = epoll_wait(epfd_, events_.data(), events_.size(), -1);
     if (n == 0) {
         printf("epoll_wait timeout!!\n");
         return 0;
@@ -58,8 +58,8 @@ int EventDispatcher::dispatch(struct timeval *timeval)
     }
 
     for (int i = 0; i < n; i++) {
-        auto &ev = events[i];
-        auto channel = (Channel *)events[i].data.ptr;
+        auto &ev = events_[i];
+        auto channel = (Channel *)events_[i].data.ptr;
 
         if ((ev.events & EPOLLHUP) && !(ev.events & EPOLLIN)) {
             printf("[warn] fd = %d , EventDispatcher::dispatch() EPOLLHUP\n", channel->fd());
@@ -82,14 +82,14 @@ int EventDispatcher::dispatch(struct timeval *timeval)
 }
 
 EventDispatcher::EventDispatcher() 
-    : efd(epoll_create1(0))
-    , events(128)
+    : epfd_(epoll_create1(0))
+    , events_(128)
 {
 }
 
 EventDispatcher::~EventDispatcher() 
 {
-    ::close(efd);
+    ::close(epfd_);
 }
 
 

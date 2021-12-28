@@ -6,7 +6,8 @@
 namespace simpleweb {
     
 //数据缓冲区
-struct Buffer {
+struct Buffer 
+{
     std::string data;
     size_t readIndex;       //缓冲读取位置
     size_t writeIndex;      //缓冲写入位置
@@ -14,17 +15,23 @@ struct Buffer {
     Buffer(size_t size = 64 * 1024);
     ~Buffer();
 
-    size_t writeable() const {
+    size_t writeable() const 
+    {
         return data.size() - writeIndex;
     }
-    size_t readable() const {
+
+    size_t readable() const 
+    {
         return writeIndex - readIndex;
     }
-    size_t spare() const {
+
+    size_t spare() const 
+    {
         return readIndex;
     }
 
-    const char* read_begin() const{
+    const char* read_begin() const
+    {
         return data.data() + readIndex;
     }
 
@@ -37,14 +44,16 @@ struct Buffer {
     int socket_read(int fd);
 
     //读buffer数据
-    char read_char() {
+    char read_char() 
+    {
         char c = data[readIndex];
         readIndex++;
         return c;
     }
 
     //查询buffer数据
-    char* find_CRLF() {
+    char* find_CRLF() 
+    {
         auto crlf = data.find("\r\n", readIndex);
         if (crlf != data.npos) return &data[crlf];
         else return nullptr;

@@ -29,9 +29,11 @@ public:
     /** 实现事件分发，然后调用event_loop的event_activate方法执行callback*/
     int dispatch(struct timeval *);
 
+    EventDispatcher(const EventDispatcher&) = delete;
+    EventDispatcher& operator = (const EventDispatcher&) = delete;
 private:
-    int efd;
-    std::vector<epoll_event> events;
+    int epfd_;
+    std::vector<epoll_event> events_;
 };
 
 

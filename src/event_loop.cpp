@@ -9,15 +9,14 @@
 
 namespace simpleweb {
 
-
 // in the i/o thread
 int EventLoop::handle_pending_channel() 
 {
     // scope lock
-    std::lock_guard<std::mutex> lock(mutex);
-    is_handle_pending = 1;
+    std::lock_guard<std::mutex> lock(mutex_);
+    is_handle_pending_ = 1;
 
-    for (auto [channel, type] : pending_list)
+    for (auto [channel, type] : pending_list_)
     {
         if (type == 1)
             handle_pending_add(channel);
@@ -26,8 +25,8 @@ int EventLoop::handle_pending_channel()
         else if (type == 3)
             handle_pending_update(channel);
     }
-    pending_list.clear();
-    is_handle_pending = 0;
+    pending_list_.clear();
+    is_handle_pending_ = 0;
     return 0;
 }
 
@@ -35,10 +34,10 @@ int EventLoop::do_channel_event(ChannelPtr channel, int type)
 {
     {
         // scope lock
-        std::lock_guard<std::mutex> lock(mutex);
-        assert(is_handle_pending == 0);
+        std::lock_guard<std::mutex> lock(mutex_);
+        assert(is_handle_pending_ == 0);
          // 将通道事件入队
-        pending_list.push_back(std::make_pair(channel, type));
+        pending_list_.push_back(std::make_pair(channel, type));
     }
 
     if (!is_in_loop_thread()) 
@@ -81,7 +80,7 @@ int EventLoop::handle_pending_add(ChannelPtr channel)
 
     channels_[channel->fd()] = channel;
     printf("add channel fd == %d, %s \n", channel->fd(), this->thread_name.c_str());
-    return eventDispatcher->add(channel.get());
+    return dispatcher_->add(channel.get());
 }
 
 // in the i/o thread
@@ -91,7 +90,7 @@ int EventLoop::handle_pending_remove(ChannelPtr channel)
     if (it != channels_.end()) {
         assert(it->second == channel);
         printf("remove channel fd == %d, %s \n", channel->fd(), this->thread_name.c_str());
-        eventDispatcher->del(channel.get());
+        dispatcher_->del(channel.get());
         channels_.erase(it);
     }
     return 0;
@@ -104,7 +103,7 @@ int EventLoop::handle_pending_update(ChannelPtr channel)
     if (it != channels_.end()) {
         assert(it->second == channel);
         printf("update channel fd == %d, %s \n", channel->fd(), thread_name.c_str());
-        eventDispatcher->update(channel.get());
+        dispatcher_->update(channel.get());
     }
     return 0;
 }
@@ -112,7 +111,7 @@ int EventLoop::handle_pending_update(ChannelPtr channel)
 void EventLoop::wakeup() 
 {
     char one = 'a';
-    ssize_t n = write(this->socketPair[0], &one, sizeof one);
+    ssize_t n = write(this->socketpair_[0], &one, sizeof one);
     if (n != sizeof(one)) {
         printf("[error]: wakeup event loop thread failed\n");
     }
@@ -121,7 +120,7 @@ void EventLoop::wakeup()
 void EventLoop::handle_wakeup() 
 {
     char one;
-    ssize_t n = read(socketPair[1], &one, sizeof(one));
+    ssize_t n = read(socketpair_[1], &one, sizeof(one));
     if (n != sizeof(one)) {
         printf("[error] handleWakeup  failed \n");
     }
@@ -135,36 +134,29 @@ EventLoop::EventLoop()
 
 EventLoop::~EventLoop()
 {
-    close(socketPair[0]);
-    close(socketPair[1]);
+    close(socketpair_[0]);
+    close(socketpair_[1]);
 }
 
 EventLoop::EventLoop(const std::string &thread_name)
-    : quit(0)
+    : quit_(0)
     , thread_name(thread_name.empty() ? "main thread" : thread_name)
     , owner_thread_id(std::this_thread::get_id())
-    , is_handle_pending(0)
-    , eventDispatcher(new EventDispatcher)
+    , is_handle_pending_(0)
+    , dispatcher_(new EventDispatcher)
 {
-    //add the socketfd to event
-    if (socketpair(AF_UNIX, SOCK_STREAM, 0, socketPair) < 0) {
+    if (socketpair(AF_UNIX, SOCK_STREAM, 0, socketpair_) < 0) {
         perror("socketpair set fialed");
     }
-    pending_list.reserve(64);
+    pending_list_.reserve(128);
     
-    // TODO: 管理 Channle 的内存; 在析构时正确释放
-    auto wakeup_chan = std::make_shared<ChannelAdaptor>(socketPair[1], EPOLLIN, this);
+    auto wakeup_chan = std::make_shared<ChannelAdaptor>(socketpair_[1], EPOLLIN, this);
     wakeup_chan->read(&EventLoop::handle_wakeup, this);
 
     printf("EventLoop wakeup fd == %d\n", wakeup_chan->fd());
     add_channel(wakeup_chan);
 }
 
-/**
- *
- * 1.参数验证
- * 2.调用dispatcher来进行事件分发,分发完回调事件处理函数
- */
 int EventLoop::run() 
 {
     assert_in_loop_thread();
@@ -173,9 +165,9 @@ int EventLoop::run()
     struct timeval timeval;
     timeval.tv_sec = 1;
 
-    while (!this->quit) {
+    while (!this->quit_) {
         //block here to wait I/O event, and get active channels
-        eventDispatcher->dispatch(&timeval);
+        dispatcher_->dispatch(&timeval);
 
         //handle the pending channel
         handle_pending_channel();
@@ -187,7 +179,7 @@ int EventLoop::run()
 
 void EventLoop::stop() 
 {
-    quit = 1;
+    quit_ = 1;
     if (!is_in_loop_thread())
         wakeup();
 }

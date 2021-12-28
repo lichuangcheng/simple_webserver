@@ -5,42 +5,42 @@
 namespace simpleweb {
 
 
-EventLoopThreadPool::EventLoopThreadPool(EventLoop *mainLoop, int threadNumber)
-    : mainLoop(mainLoop)
-    , thread_number(threadNumber)
+EventLoopThreadPool::EventLoopThreadPool(EventLoop *main_loop, int threadNumber)
+    : main_loop_(main_loop)
+    , thread_number_(threadNumber)
 {
-    eventLoopThreads.reserve(threadNumber);
+    ev_loop_threads_.reserve(threadNumber);
 }
 
 //一定是main thread发起
 void EventLoopThreadPool::start()
 {
-    assert(!started);
-    mainLoop->assert_in_loop_thread();
+    assert(!started_);
+    main_loop_->assert_in_loop_thread();
 
-    started = 1;
-    if (thread_number <= 0) 
+    started_ = 1;
+    if (thread_number_ <= 0) 
         return;
 
-    for (int i = 0; i < thread_number; i++)
-        eventLoopThreads.emplace_back(new EventLoopThread("Thread-" + std::to_string(i)))->start();
+    for (int i = 0; i < thread_number_; i++)
+        ev_loop_threads_.emplace_back(new EventLoopThread("Thread-" + std::to_string(i)))->start();
 }
 
 //一定是main thread中选择
 EventLoop* EventLoopThreadPool::get_loop()
 {
-    assert(started);
-    mainLoop->assert_in_loop_thread();
+    assert(started_);
+    main_loop_->assert_in_loop_thread();
 
     //优先选择当前主线程
-    auto selected = mainLoop;
+    auto selected = main_loop_;
     //从线程池中按照顺序挑选出一个线程
-    if (thread_number > 0)
+    if (thread_number_ > 0)
     {
-        selected = eventLoopThreads[position]->loop_.get();
-        if (++position >= thread_number)
+        selected = ev_loop_threads_[pos_]->loop_.get();
+        if (++pos_ >= thread_number_)
         {
-            position = 0;
+            pos_ = 0;
         }
     }
 

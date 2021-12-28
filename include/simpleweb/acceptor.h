@@ -24,8 +24,8 @@ private:
     Acceptor(const Acceptor&) = delete;
     Acceptor& operator = (const Acceptor&) = delete;
     
-    int listen_port;
-    int listen_fd {-1};
+    int port_;
+    int listen_fd_ {-1};
 };
 
 
